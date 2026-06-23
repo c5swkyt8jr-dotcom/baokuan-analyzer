@@ -815,7 +815,7 @@ function fetchTrends(btn) {
 // ============================================================
 //  TOPIC FACTORY: 生成选题
 // ============================================================
-function generateTopics() {
+async function generateTopics() {
   const cat = document.getElementById('topic-cat').value;
   const platform = document.getElementById('topic-platform').value;
   const duration = document.getElementById('topic-duration').value;
@@ -823,6 +823,18 @@ function generateTopics() {
 
   const container = document.getElementById('topics-container');
   container.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+
+  // 🔬 拆解驱动模式 + API Key 已配置 → 直接AI生成
+  if (analysisContext && getApiConfig().apiKey) {
+    try {
+      const topics = await aiGenerateTopics(idea || cat, cat, platform, duration);
+      generatedTopics = topics;
+      renderTopicCards(topics, platform, duration);
+      return;
+    } catch(e) {
+      console.error('AI选题生成失败，降级到模板:', e.message);
+    }
+  }
 
   setTimeout(() => {
     const topics = buildTopics(cat, platform, duration, idea);
@@ -838,6 +850,130 @@ function refreshTopics() {
 let shownTopicTitles = new Set();  // 追踪已显示的选题标题，避免换一批重复
 // 额外追踪：每次 generateTopics 调用的去重上下文
 let lastGenerationContext = '';
+
+// ============================================================
+//  🤖 AI 驱动选题生成（拆解数据 + DeepSeek）
+// ============================================================
+async function aiGenerateTopics(idea, cat, platform, duration) {
+  const ctx = analysisContext;
+  const pf = getPlatformFraming(platform);
+
+  // 构建分析上下文
+  let analysisBlock = '';
+  analysisBlock += '【已分析爆款视频数据】\n';
+  analysisBlock += `- 爆款风格: ${ctx.viral_style||'未知'}\n`;
+  analysisBlock += `- 综合得分: ${ctx.overall_score||0}分\n`;
+  if (ctx.content_formula) {
+    analysisBlock += `- 内容公式: ${ctx.content_formula.formula_name||''} — ${ctx.content_formula.formula_template||''}\n`;
+    if (ctx.content_formula.core_elements) analysisBlock += `- 核心要素: ${ctx.content_formula.core_elements.join('、')}\n`;
+  }
+  if (ctx.opening_hook) analysisBlock += `- 钩子类型: ${ctx.opening_hook.hook_type||''} — ${ctx.opening_hook.hook_description||''}\n`;
+  if (ctx.script_structure) analysisBlock += `- 脚本结构: ${ctx.script_structure.structure_type||''}\n`;
+  if (ctx.emotional_curve) analysisBlock += `- 情绪曲线: ${ctx.emotional_curve.curve_description||''}\n`;
+  if (ctx.summary) analysisBlock += `- 参考总结: ${ctx.summary}\n`;
+  analysisBlock += '\n';
+
+  const systemPrompt = `你是顶级短视频内容策划专家。根据爆款拆解数据，为该风格创作全新的选题。
+
+你必须严格模仿原爆款的：
+- 内容公式/结构骨架（换了主题但保持相同节奏）
+- 情绪曲线设计（在相同位置制造相同情绪）
+- 钩子类型（用同类型钩子但换具体内容）
+- 目标人群（保持相同受众定位）
+
+返回JSON格式，不要markdown包裹：
+{
+  "topics": [
+    {
+      "title": "选题标题（要有吸引力，15字以内）",
+      "reason": "为什么这个选题能爆（结合拆解数据分析，50字内）",
+      "tags": ["标签1","标签2","标签3"],
+      "formula_usage": "如何应用了内容公式的结构（30字内）",
+      "outline": ["分镜1描述","分镜2描述","分镜3描述","分镜4描述","分镜5描述"],
+      "shootDir": "拍摄方向建议（含平台适配，80字内）"
+    }
+  ]
+}
+
+${platform}平台特点：${pf.framing.join('、')}。标题前缀风格：${pf.titlePrefix.join('、')}。时长${duration}。`;
+
+  const userPrompt = `${analysisBlock}用户想法: ${idea || '基于爆款风格自由发挥'}\n分类: ${cat}\n请生成5个选题，每个都要严格应用内容公式的结构。`;
+
+  const resp = await callAI(systemPrompt, userPrompt, 0.9);
+  // 容错JSON解析
+  let json = resp;
+  const codeMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeMatch) json = codeMatch[1];
+  const data = JSON.parse(json.trim());
+
+  return (data.topics || []).slice(0, 6).map((t, i) => ({
+    ...t,
+    id: 'ai_' + Date.now() + '_' + i,
+    cat: cat,
+    titles: t.outline || [],
+    outline: t.outline || [],
+    shootDir: t.shootDir || '',
+    tags: t.tags || [],
+    isAiGenerated: true,
+  }));
+}
+
+// ============================================================
+//  🤖 AI 驱动分镜脚本生成（拆解数据 + DeepSeek）
+// ============================================================
+async function aiGenerateScript(topic, duration, style, platform) {
+  const ctx = analysisContext;
+  const pf = getPlatformFraming(platform);
+
+  let analysisBlock = '';
+  analysisBlock += '【已分析爆款视频数据 - 请严格模仿】\n';
+  analysisBlock += `爆款风格: ${ctx.viral_style||'未知'}\n`;
+  analysisBlock += `综合评分: ${ctx.overall_score||0}分\n`;
+  if (ctx.content_formula) {
+    analysisBlock += `内容公式: ${ctx.content_formula.formula_name||''}\n`;
+    analysisBlock += `公式模板: ${ctx.content_formula.formula_template||''}\n`;
+    if (ctx.content_formula.core_elements) analysisBlock += `核心要素: ${ctx.content_formula.core_elements.join('、')}\n`;
+  }
+  if (ctx.opening_hook) analysisBlock += `钩子类型: ${ctx.opening_hook.hook_type||''} - ${ctx.opening_hook.hook_description||''}\n`;
+  if (ctx.script_structure) analysisBlock += `脚本结构: ${ctx.script_structure.structure_type||''}\n`;
+  if (ctx.emotional_curve) analysisBlock += `情绪曲线: ${ctx.emotional_curve.curve_description||''}\n`;
+  if (ctx.summary) analysisBlock += `参考总结: ${ctx.summary}\n`;
+  analysisBlock += `\n【任务】基于以上拆解数据，为选题「${topic}」生成${duration}的${platform}分镜脚本。必须保持相同的结构骨架、情绪节奏和表达风格。`;
+
+  const systemPrompt = `你是顶级短视频导演和编剧。基于爆款拆解数据生成专业分镜脚本。
+
+你必须严格：
+1. 复刻原爆款的脚本结构骨架（换了主题但镜头数量、节奏保持相同）
+2. 复制情绪曲线设计（在相同的镜头位置制造相同类型的情绪冲击）
+3. 使用同类型钩子开场（但换具体内容）
+4. 适配${platform}平台的镜头语言（${pf.framing.join('、')}）
+
+返回JSON格式（不要markdown包裹）：
+{
+  "scenes": [
+    {
+      "label": "镜头名称",
+      "time": "00:00-00:05",
+      "shot": "景别(特写/近景/中景/全景)",
+      "camera": "运镜方式",
+      "visual": "画面内容描述(详细,50字)",
+      "vocal": "台词/旁白(逐字写出)",
+      "emotion": "情绪/节奏(标注与原爆款对应镜头的关系)",
+      "audio": "音效/BGM建议",
+      "subtitle": "字幕建议(大字显示内容)"
+    }
+  ]
+}`;
+
+  const userPrompt = `${analysisBlock}\n\n新选题: ${topic}\n时长: ${duration}\n风格: ${style}\n平台: ${platform}\n\n请生成分镜脚本，每个镜头都要详细。`;
+
+  const resp = await callAI(systemPrompt, userPrompt, 0.8);
+  let json = resp;
+  const codeMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeMatch) json = codeMatch[1];
+  const data = JSON.parse(json.trim());
+  return data.scenes || [];
+}
 
 function buildTopics(cat, platform, duration, idea) {
   // 构建当前生成上下文键（用于检测是否需要重置去重）
@@ -1756,6 +1892,43 @@ function renderTopicCards(topics, platform, duration) {
         </div>
       </div>`;
     }
+    // 🔬 AI DeepSeek 生成选题卡片
+    if (t.isAiGenerated) {
+      return `
+      <div class="topic-card" id="titem-${i}" onclick="selectTopic(${i})" style="border-left:3px solid #667eea;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;">🤖 AI拆解驱动</span>
+          ${t.formula_usage ? `<span style="font-size:11px;color:#667eea;">结构应用: ${t.formula_usage}</span>` : ''}
+        </div>
+        <div class="topic-top">
+          <div class="topic-left">
+            <div class="topic-num">${String(i+1).padStart(2,'0')}</div>
+            <div class="topic-main">
+              <div class="topic-title">${t.title}</div>
+              <div class="topic-reason">${t.reason}</div>
+            </div>
+          </div>
+          <div class="topic-actions">
+            <button class="cbtn primary" onclick="event.stopPropagation();confirmTopic(${i})">选这个 ✅</button>
+          </div>
+        </div>
+        <div class="topic-outline">
+          <div class="topic-outline-title">📋 AI 生成内容大纲（模仿爆款结构）</div>
+          <div class="topic-outline-list">
+            ${(t.outline || []).map(o => `<li>${o}</li>`).join('')}
+          </div>
+        </div>
+        <div class="topic-shoot">
+          <div class="topic-shoot-title">🎥 拍摄方向建议（${platform}）</div>
+          <div class="topic-shoot-list">• ${t.shootDir || '参考爆款原片拍摄风格'}</div>
+        </div>
+        <div class="topic-tags">
+          ${(t.tags || []).map(tag => `<span class="ttag">${tag}</span>`).join('')}
+          <span class="ttag" style="background:#E6F1FB;color:#185FA5;">${platform}</span>
+          <span class="ttag" style="background:#EEEDFE;color:#3C3489;">${duration}</span>
+        </div>
+      </div>`;
+    }
     // 普通模板选题卡片
     return `
     <div class="topic-card" id="titem-${i}" onclick="selectTopic(${i})">
@@ -1903,7 +2076,7 @@ function selectRef(i, id) {
 // ============================================================
 //  SCRIPT GENERATION: 专业分镜脚本
 // ============================================================
-function generateScript() {
+async function generateScript() {
   let topic = '';
   const customInput = document.getElementById('custom-topic-input');
   if (customInput && customInput.value.trim()) {
@@ -1919,11 +2092,67 @@ function generateScript() {
 
   const duration = document.getElementById('script-duration')?.value || '30秒';
   const style = document.getElementById('script-style')?.value || '快节奏卡点';
+  const platform = document.getElementById('script-platform')?.value || '抖音';
   const ref = (currentMode !== 'original' && selectedRefIdx >= 0)
     ? TREND_DATA.find(t => t.id === selectedRefIdx) : null;
 
   const output = document.getElementById('script-output');
   if (!output) { alert('页面渲染异常，请刷新后重试'); return; }
+
+  // 🔬 拆解驱动模式 + API Key 已配置 → 直接AI生成分镜脚本
+  if (analysisContext && getApiConfig().apiKey) {
+    output.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">🧠 DeepSeek 正在深度分析拆解数据，生成模仿脚本...</p></div>';
+    try {
+      const scenes = await aiGenerateScript(topic, duration, style, platform);
+      if (!scenes || !scenes.length) throw new Error('AI脚本生成返回空结果');
+
+      const stEl = document.getElementById('script-title');
+      if (stEl) stEl.textContent = '🤖 AI 拆解驱动脚本';
+      const smEl = document.getElementById('script-meta');
+      if (smEl) smEl.innerHTML = `<span style="background:#f0efe9;padding:2px 8px;border-radius:6px;">${topic}</span> <span style="font-size:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:2px 8px;border-radius:8px;margin-left:8px;">模仿: ${analysisContext.viral_style||'未知风格'}</span>`;
+
+      let html = `<div class="sw-body">`;
+      html += `<div style="margin-bottom:14px;padding:10px 14px;background:#f8f7f3;border-radius:9px;">
+        <span style="font-size:13px;font-weight:600;">「${topic}」</span>
+        <span style="font-size:12px;color:#888;margin-left:8px;">${duration} · AI拆解驱动 · ${style}</span>
+      </div>`;
+
+      scenes.forEach((s, i) => {
+        html += `
+          <div class="scene-card" id="scene-${i}">
+            <div class="scene-header">
+              <div class="scene-label">镜头 ${i+1} · ${s.label || '内容'}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="scene-time">${s.time || ''}</span>
+              </div>
+            </div>
+            <div class="scene-body">
+              <div class="scene-row"><span class="scene-key">景别</span><span class="scene-val">${s.shot || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">运镜</span><span class="scene-val">${s.camera || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">台词/旁白</span><span class="scene-val highlight">${s.vocal || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">画面内容</span><span class="scene-val">${s.visual || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">情绪/节奏</span><span class="scene-val" style="color:#8e44ad;">${s.emotion || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">音效/BGM</span><span class="scene-val" style="color:#185FA5;">${s.audio || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">字幕建议</span><span class="scene-val" style="font-size:12px;color:#888;">${s.subtitle || '-'}</span></div>
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
+      output.innerHTML = html;
+      const cb = document.getElementById('copy-btn');
+      if (cb) cb.style.display = 'inline-block';
+      return;
+    } catch(e) {
+      console.error('AI脚本生成失败，降级到模板:', e.message);
+      output.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);">
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">AI脚本生成失败</div>
+        <div style="font-size:13px;color:#888;margin-bottom:16px;">${e.message || '未知错误'}</div>
+        <button class="btn-sm" onclick="generateScript()">🔄 重试</button>
+      </div>`;
+      return;
+    }
+  }
+
   output.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">正在分析热点结构、生成专业分镜...</p></div>';
 
   setTimeout(() => {
@@ -2375,7 +2604,19 @@ function saveApiConfig() {
 }
 
 function loadApiConfig() {
-  const config = getApiConfig();
+  let config = getApiConfig();
+
+  // 🚀 自动预填 DeepSeek API Key（当没有任何配置时）
+  if (!config.apiKey && !config.provider) {
+    config = {
+      provider: 'deepseek',
+      apiKey: 'sk-0022c3374b674bc58d5e38a587f2fe7e',
+      model: 'deepseek-chat',
+      modTemp: { hook: 1.2, scene: 0.9, polish: 0.7, title: 1.1 }
+    };
+    localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+  }
+
   if (config.provider) {
     const sel = document.getElementById('api-provider');
     if (sel) sel.value = config.provider;
