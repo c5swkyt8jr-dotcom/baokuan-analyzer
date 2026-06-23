@@ -123,7 +123,7 @@
   <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
     <span class="upload-icon">📤</span>
     <div class="upload-title">点击上传或拖拽视频到此处</div>
-    <div class="upload-hint">支持 MP4 / MOV / AVI / WebM，最大 200MB</div>
+    <div class="upload-hint">支持 MP4 / MOV / AVI / WebM，无大小限制</div>
     <div class="upload-warning">⚠ 视频将通过 StepFun API 上传至云端进行分析，请勿上传敏感内容</div>
     <div class="file-info hidden" id="fileInfo"></div>
   </div>
@@ -396,10 +396,7 @@ function handleFileSelect(file) {
   const key = getApiKey();
   if (!key) { showToast('请先输入并保存 StepFun API Key', true); return; }
   
-  // Size check
   const sizeMB = file.size / (1024 * 1024);
-  if (sizeMB > 200) { showToast('文件过大（最大200MB），请压缩后再上传', true); return; }
-  
   document.getElementById('fileInfo').textContent = `已选择: ${file.name} (${sizeMB.toFixed(1)}MB)`;
   document.getElementById('fileInfo').classList.remove('hidden');
   
