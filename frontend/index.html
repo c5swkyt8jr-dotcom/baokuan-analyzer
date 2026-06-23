@@ -662,15 +662,38 @@ function clearAnalysis() {
 function getAnalysisPrompt() {
   if (!analysisContext) return '';
   const ctx = analysisContext;
-  let p = '\n【参考拆解数据 - 请模仿此爆款风格创作】\n';
+  let p = '\n【🎯 80%模仿指令 — 请严格遵循以下规则创作】\n\n';
+  
+  // 规则1：必须保留的元素（80%不变）
+  p += '## 必须保留（80%不变部分）\n';
+  p += '- 开场钩子模式：'+ (ctx.opening_hook?.hook_type||'未知') + '型，保留原版开场的第一句话术节奏\n';
+  p += '- 口播语气风格：必须模仿原视频字幕/逐字稿的说话方式、断句习惯、语气词使用\n';
+  if (ctx.script_structure?.structure_type) p += '- 脚本结构骨架：必须使用'+ctx.script_structure.structure_type+'结构，保持相同的镜头数量和节奏\n';
+  if (ctx.emotional_curve?.curve_description) p += '- 情绪曲线设计：必须在相同的情绪节点制造相同类型的情绪冲击。原版情绪曲线：'+ctx.emotional_curve.curve_description+'\n';
+  if (ctx.content_formula?.formula_template) p += '- 内容公式模板：必须套用「'+ctx.content_formula.formula_template+'」的结构框架\n';
+  p += '- 字幕风格：保持相同的字号使用习惯、emoji密度、标点风格\n';
+  p += '- CTA互动引导：保留原版的互动方式（点赞引导/评论提问/关注话术）和出现的时机\n\n';
+  
+  // 规则2：可以替换的元素（20%可变）
+  p += '## 可以替换（20%可变部分）\n';
+  p += '- 具体话题/产品/场景（必须换一个同类但不完全相同的新主题）\n';
+  p += '- 人物/角色名称\n';
+  p += '- 具体的数字、数据、案例（换成同类新案例）\n\n';
+
+  // 原视频逐字稿（最关键的语气参考）
+  if (ctx.transcript) {
+    p += '## 原视频逐字稿（模仿语气的关键参考）\n';
+    p += ctx.transcript.substring(0, 3000) + '\n\n';
+  }
+  
+  // 分析数据摘要
+  p += '## 拆解分析数据\n';
   p += '爆款风格: '+ctx.viral_style+'\n';
-  if (ctx.content_formula?.formula_template) p += '内容公式模板: '+ctx.content_formula.formula_template+'\n';
-  if (ctx.content_formula?.core_elements) p += '核心要素: '+ctx.content_formula.core_elements.join('、')+'\n';
-  if (ctx.script_structure?.structure_type) p += '脚本结构类型: '+ctx.script_structure.structure_type+'\n';
-  if (ctx.opening_hook?.hook_type) p += '钩子类型: '+ctx.opening_hook.hook_type+'\n';
-  if (ctx.emotional_curve?.curve_description) p += '情绪曲线: '+ctx.emotional_curve.curve_description+'\n';
-  if (ctx.summary) p += '参考总结: '+ctx.summary.substring(0,500)+'\n';
-  p += '\n请模仿以上风格的节奏、结构和情绪设计，生成全新的选题和脚本。保持相同的内容DNA但更换主题。';
+  if (ctx.summary) p += '参考总结: '+ctx.summary.substring(0, 300)+'\n';
+  if (ctx.opening_analysis) p += '钩子分析: '+ctx.opening_analysis.substring(0, 300)+'\n';
+  if (ctx.structure_analysis) p += '结构分析: '+ctx.structure_analysis.substring(0, 300)+'\n';
+  
+  p += '\n【核心要求】请以上述逐字稿的语气风格为基准，以80%相似度模仿创作。保留骨架、换掉皮肉。';
   return p;
 }
 
@@ -858,46 +881,58 @@ async function aiGenerateTopics(idea, cat, platform, duration) {
   const ctx = analysisContext;
   const pf = getPlatformFraming(platform);
 
-  // 构建分析上下文
+  // 构建分析上下文（包含逐字稿作为语气参考）
   let analysisBlock = '';
-  analysisBlock += '【已分析爆款视频数据】\n';
-  analysisBlock += `- 爆款风格: ${ctx.viral_style||'未知'}\n`;
-  analysisBlock += `- 综合得分: ${ctx.overall_score||0}分\n`;
+  analysisBlock += '【🎯 80%模仿原爆款 — 请严格按以下规则生成选题】\n\n';
+  analysisBlock += `原视频爆款风格: ${ctx.viral_style||'未知'} | 综合得分: ${ctx.overall_score||0}分\n`;
   if (ctx.content_formula) {
-    analysisBlock += `- 内容公式: ${ctx.content_formula.formula_name||''} — ${ctx.content_formula.formula_template||''}\n`;
-    if (ctx.content_formula.core_elements) analysisBlock += `- 核心要素: ${ctx.content_formula.core_elements.join('、')}\n`;
+    analysisBlock += `必须套用的内容公式: ${ctx.content_formula.formula_name||''} — ${ctx.content_formula.formula_template||''}\n`;
+    if (ctx.content_formula.core_elements) analysisBlock += `核心要素(必须保留): ${ctx.content_formula.core_elements.join('、')}\n`;
   }
-  if (ctx.opening_hook) analysisBlock += `- 钩子类型: ${ctx.opening_hook.hook_type||''} — ${ctx.opening_hook.hook_description||''}\n`;
-  if (ctx.script_structure) analysisBlock += `- 脚本结构: ${ctx.script_structure.structure_type||''}\n`;
-  if (ctx.emotional_curve) analysisBlock += `- 情绪曲线: ${ctx.emotional_curve.curve_description||''}\n`;
-  if (ctx.summary) analysisBlock += `- 参考总结: ${ctx.summary}\n`;
+  if (ctx.opening_hook) analysisBlock += `开场钩子模式(必须保留): ${ctx.opening_hook.hook_type||''}型\n`;
+  if (ctx.script_structure) analysisBlock += `脚本结构骨架(必须保留): ${ctx.script_structure.structure_type||''}\n`;
+  if (ctx.emotional_curve) analysisBlock += `情绪曲线设计(必须保留): ${ctx.emotional_curve.curve_description||''}\n`;
+  if (ctx.summary) analysisBlock += `原视频总结: ${ctx.summary.substring(0, 200)}\n`;
+  // 逐字稿是最关键的语气参考
+  if (ctx.transcript) {
+    analysisBlock += `\n【原视频逐字稿 — 模仿语气/话术/节奏的关键参考】\n${ctx.transcript.substring(0, 2500)}\n`;
+  }
   analysisBlock += '\n';
 
-  const systemPrompt = `你是顶级短视频内容策划专家。根据爆款拆解数据，为该风格创作全新的选题。
+  const systemPrompt = `你是顶级短视频仿写专家。你的任务是对原爆款视频进行80%相似度的模仿创作——保留骨架、换掉皮肉。
 
-你必须严格模仿原爆款的：
-- 内容公式/结构骨架（换了主题但保持相同节奏）
-- 情绪曲线设计（在相同位置制造相同情绪）
-- 钩子类型（用同类型钩子但换具体内容）
-- 目标人群（保持相同受众定位）
+你必须严格遵循以下「80%保留 vs 20%替换」规则：
+
+【80%必须保留（换了主题但以下不变）】
+1. 开场钩子模式：必须使用${ctx.opening_hook?.hook_type||'原版'}型开场，保留原版第一句话的节奏和句式
+2. 口播语气风格：必须模仿逐字稿中的说话方式、断句习惯、语气词使用频率
+3. 脚本结构骨架：必须使用${ctx.script_structure?.structure_type||'原版'}结构，镜头数量和节奏不变
+4. 情绪曲线：必须在相同位置制造相同类型的情绪冲击
+5. 字幕风格：保持相同的字号习惯、emoji密度、标点风格
+6. 话术模板：以逐字稿为蓝本，复制其口播的句式长度和转折方式
+
+【20%可以替换（必须换掉的）】
+1. 具体话题/产品/场景（换一个同类但不相同的新主题）
+2. 人物/角色名称
+3. 具体数字、数据、案例（换成同类新案例）
 
 返回JSON格式，不要markdown包裹：
 {
   "topics": [
     {
-      "title": "选题标题（要有吸引力，15字以内）",
-      "reason": "为什么这个选题能爆（结合拆解数据分析，50字内）",
+      "title": "选题标题（模仿原视频标题的句式风格，15字内）",
+      "reason": "为什么能复刻爆款（结合原视频拆解数据说明，50字内）",
       "tags": ["标签1","标签2","标签3"],
-      "formula_usage": "如何应用了内容公式的结构（30字内）",
-      "outline": ["分镜1描述","分镜2描述","分镜3描述","分镜4描述","分镜5描述"],
-      "shootDir": "拍摄方向建议（含平台适配，80字内）"
+      "formula_usage": "如何严格应用了内容公式结构（30字内）",
+      "outline": ["分镜1:复制原版镜头1的结构(保留情绪/节奏,换内容)","分镜2:复制原版镜头2...","分镜3","分镜4","分镜5"],
+      "shootDir": "拍摄方向（含平台适配，80字内）"
     }
   ]
 }
 
-${platform}平台特点：${pf.framing.join('、')}。标题前缀风格：${pf.titlePrefix.join('、')}。时长${duration}。`;
+${platform}平台特征：${pf.framing.join('、')}。标题风格：${pf.titlePrefix.join('、')}。时长${duration}。`;
 
-  const userPrompt = `${analysisBlock}用户想法: ${idea || '基于爆款风格自由发挥'}\n分类: ${cat}\n请生成5个选题，每个都要严格应用内容公式的结构。`;
+  const userPrompt = `${analysisBlock}用户补充想法: ${idea || '基于爆款风格自由发挥，严格套用原视频公式'}\n分类: ${cat}\n\n请生成5个选题，每个都必须严格套用原视频的内容公式和结构骨架，模仿其语气风格。`;
 
   const resp = await callAI(systemPrompt, userPrompt, 0.9);
   // 容错JSON解析
@@ -926,46 +961,66 @@ async function aiGenerateScript(topic, duration, style, platform) {
   const pf = getPlatformFraming(platform);
 
   let analysisBlock = '';
-  analysisBlock += '【已分析爆款视频数据 - 请严格模仿】\n';
-  analysisBlock += `爆款风格: ${ctx.viral_style||'未知'}\n`;
-  analysisBlock += `综合评分: ${ctx.overall_score||0}分\n`;
+  analysisBlock += '【🎯 80%模仿分镜脚本 — 逐镜复刻原视频结构骨架】\n\n';
+  analysisBlock += `原视频爆款风格: ${ctx.viral_style||'未知'} | 综合评分: ${ctx.overall_score||0}分\n`;
   if (ctx.content_formula) {
-    analysisBlock += `内容公式: ${ctx.content_formula.formula_name||''}\n`;
-    analysisBlock += `公式模板: ${ctx.content_formula.formula_template||''}\n`;
-    if (ctx.content_formula.core_elements) analysisBlock += `核心要素: ${ctx.content_formula.core_elements.join('、')}\n`;
+    analysisBlock += `必须套用的内容公式: ${ctx.content_formula.formula_name||''}\n公式模板: ${ctx.content_formula.formula_template||''}\n`;
+    if (ctx.content_formula.core_elements) analysisBlock += `核心要素(保留): ${ctx.content_formula.core_elements.join('、')}\n`;
   }
-  if (ctx.opening_hook) analysisBlock += `钩子类型: ${ctx.opening_hook.hook_type||''} - ${ctx.opening_hook.hook_description||''}\n`;
-  if (ctx.script_structure) analysisBlock += `脚本结构: ${ctx.script_structure.structure_type||''}\n`;
-  if (ctx.emotional_curve) analysisBlock += `情绪曲线: ${ctx.emotional_curve.curve_description||''}\n`;
-  if (ctx.summary) analysisBlock += `参考总结: ${ctx.summary}\n`;
-  analysisBlock += `\n【任务】基于以上拆解数据，为选题「${topic}」生成${duration}的${platform}分镜脚本。必须保持相同的结构骨架、情绪节奏和表达风格。`;
+  if (ctx.opening_hook) analysisBlock += `钩子类型(保留): ${ctx.opening_hook.hook_type||''}\n`;
+  if (ctx.script_structure) {
+    analysisBlock += `脚本结构(保留): ${ctx.script_structure.structure_type||''}\n`;
+    if (ctx.script_structure.key_moments) analysisBlock += `关键节点: ${JSON.stringify(ctx.script_structure.key_moments)}\n`;
+    if (ctx.structure_analysis) analysisBlock += `结构分析: ${ctx.structure_analysis.substring(0, 300)}\n`;
+  }
+  if (ctx.emotional_curve) {
+    analysisBlock += `情绪曲线(保留): ${ctx.emotional_curve.curve_description||''}\n`;
+    if (ctx.emotional_curve.peak_moments) analysisBlock += `情绪峰值节点: ${JSON.stringify(ctx.emotional_curve.peak_moments)}\n`;
+  }
+  if (ctx.interaction_guide?.cta_moments) analysisBlock += `CTA互动节点(保留): ${JSON.stringify(ctx.interaction_guide.cta_moments)}\n`;
+  // 逐字稿是最关键的语气参考
+  if (ctx.transcript) {
+    analysisBlock += `\n【原视频逐字稿 — 每句台词必须模仿其语气和节奏】\n${ctx.transcript.substring(0, 3000)}\n`;
+  }
+  analysisBlock += `\n【任务】严格基于以上数据，为选题「${topic}」生成${duration}的${platform}分镜脚本。\n`;
+  analysisBlock += `规则：保留原视频所有结构节点和情绪节奏，只把具体话题/场景/案例替换成新选题的内容。`;
 
-  const systemPrompt = `你是顶级短视频导演和编剧。基于爆款拆解数据生成专业分镜脚本。
+  const systemPrompt = `你是顶级短视频仿写导演。你的任务是对原爆款视频进行80%相似度的分镜脚本复刻。
 
-你必须严格：
-1. 复刻原爆款的脚本结构骨架（换了主题但镜头数量、节奏保持相同）
-2. 复制情绪曲线设计（在相同的镜头位置制造相同类型的情绪冲击）
-3. 使用同类型钩子开场（但换具体内容）
-4. 适配${platform}平台的镜头语言（${pf.framing.join('、')}）
+你必须严格遵循「逐镜对照」原则——每个新镜头都要对应原视频的相应镜头：
+
+【逐镜复刻规则】
+1. 镜头数量和节奏：必须与原视频保持相同数量的关键镜头，节奏一致
+2. 开场镜头：必须使用${ctx.opening_hook?.hook_type||'原版'}型开场，复制原版第一句台词的节奏和冲击力
+3. 口播台词：每一句台词都必须模仿逐字稿中的语气、断句、句式长度、感叹词使用习惯
+4. 情绪节点：在每个原视频的情绪峰值位置，制造相同类型和强度的情绪冲击
+5. 景别/运镜：保持原视频的镜头语言风格（特写/近景/中景的切换节奏）
+6. CTA互动：在相同位置使用相同类型的互动引导
+7. 字幕/BGM：保持原视频的字幕密度、emoji风格、BGM节奏基调
+
+【必须替换的20%】
+- 具体话题/产品/场景内容
+- 人物/角色名称  
+- 具体数据/案例（换同类但不同内容）
 
 返回JSON格式（不要markdown包裹）：
 {
   "scenes": [
     {
-      "label": "镜头名称",
+      "label": "镜头名称（标注对应原视频哪个镜头位置）",
       "time": "00:00-00:05",
-      "shot": "景别(特写/近景/中景/全景)",
+      "shot": "景别",
       "camera": "运镜方式",
-      "visual": "画面内容描述(详细,50字)",
-      "vocal": "台词/旁白(逐字写出)",
-      "emotion": "情绪/节奏(标注与原爆款对应镜头的关系)",
+      "visual": "画面内容（替换了主题但保留原版构图逻辑，50字）",
+      "vocal": "台词/旁白（必须模仿逐字稿的说话方式逐字写出）",
+      "emotion": "情绪/节奏（标注与原爆款对应节点的关系）",
       "audio": "音效/BGM建议",
-      "subtitle": "字幕建议(大字显示内容)"
+      "subtitle": "字幕建议(大字显示，模仿原视频字幕风格)"
     }
   ]
 }`;
 
-  const userPrompt = `${analysisBlock}\n\n新选题: ${topic}\n时长: ${duration}\n风格: ${style}\n平台: ${platform}\n\n请生成分镜脚本，每个镜头都要详细。`;
+  const userPrompt = `${analysisBlock}\n\n新选题: ${topic}\n时长: ${duration}\n风格: ${style}\n平台: ${platform}\n\n请生成逐镜分镜脚本。每个镜头的台词必须模仿原视频逐字稿的语气和节奏写出来，不能只是描述。`;
 
   const resp = await callAI(systemPrompt, userPrompt, 0.8);
   let json = resp;

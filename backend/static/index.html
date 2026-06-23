@@ -931,14 +931,19 @@ renderResults = function(data) {
 function sendToGenerator() {
   if (!currentAnalysisData) { showToast('暂无分析数据'); return; }
   const rj = currentAnalysisData.result_json || {};
+  const transcript = currentAnalysisData.transcript_text || '';
+  // 逐字稿是模仿的关键——保留语气、话术、节奏、口播风格
   const payload = {
     from: 'analyzer', viral_style: currentAnalysisData.viral_style || '',
     overall_score: currentAnalysisData.overall_score || 0,
     summary: currentAnalysisData.summary || '',
-    transcript: (currentAnalysisData.transcript_text || '').substring(0, 2000),
+    transcript: transcript.substring(0, 5000),
     opening_hook: rj.opening_hook || {}, script_structure: rj.script_structure || {},
     emotional_curve: rj.emotional_curve || {}, interaction_guide: rj.interaction_guide || {},
     data_prediction: rj.data_prediction || {}, content_formula: rj.content_formula || {},
+    opening_analysis: (rj.opening_hook?.analysis || '').substring(0, 500),
+    structure_analysis: (rj.script_structure?.analysis || '').substring(0, 500),
+    curve_analysis: (rj.emotional_curve?.analysis || '').substring(0, 500),
   };
   const json = encodeURIComponent(JSON.stringify(payload));
   const encoded = btoa(json);

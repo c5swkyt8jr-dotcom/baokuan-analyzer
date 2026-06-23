@@ -580,17 +580,22 @@ function toggleCard(card) {
 function sendToGenerator() {
   if (!currentAnalysis) { showToast('暂无分析数据', true); return; }
   const rj = currentAnalysis.result_json || {};
+  const transcript = currentAnalysis.transcript_text || '';
   const payload = {
     from: 'analyzer',
     viral_style: currentAnalysis.viral_style || '',
     overall_score: currentAnalysis.overall_score || 0,
     summary: currentAnalysis.summary || '',
+    transcript: transcript.substring(0, 5000),
     opening_hook: rj.opening_hook || {},
     script_structure: rj.script_structure || {},
     emotional_curve: rj.emotional_curve || {},
     interaction_guide: rj.interaction_guide || {},
     data_prediction: rj.data_prediction || {},
     content_formula: rj.content_formula || {},
+    opening_analysis: (rj.opening_hook?.analysis || '').substring(0, 500),
+    structure_analysis: (rj.script_structure?.analysis || '').substring(0, 500),
+    curve_analysis: (rj.emotional_curve?.analysis || '').substring(0, 500),
   };
   const json = encodeURIComponent(JSON.stringify(payload));
   const encoded = btoa(json);
