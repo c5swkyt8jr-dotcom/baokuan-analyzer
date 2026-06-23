@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>爆款拆解机 · 视频分析</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a1a;--bg2:#111130;--card:#141438;--card2:#1a1a4a;
+    --text:#e0e0f0;--text2:#9090c0;--accent:#7c5cfc;--accent2:#a78bfa;
+    --green:#10b981;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+    --radius:16px;--radius-sm:10px;--font:'Segoe UI',system-ui,sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;background-image:radial-gradient(ellipse at 50% 0%,#1a1a5a22 0%,transparent 60%)}
+  .container{max-width:900px;margin:0 auto;padding:20px}
+
+  /* Header */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--card);border-radius:var(--radius);margin-bottom:20px;border:1px solid rgba(255,255,255,0.05);flex-wrap:wrap;gap:12px}
+  .logo{font-size:1.3rem;font-weight:700;background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .key-input-area{display:flex;align-items:center;gap:8px;flex:1;min-width:280px;justify-content:flex-end}
+  .key-input-area input{padding:8px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:var(--bg);color:var(--text);font-size:0.85rem;width:260px;outline:none;transition:border-color .2s}
+  .key-input-area input:focus{border-color:var(--accent)}
+  .key-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  .key-dot.active{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+  /* Upload */
+  .upload-zone{border:2px dashed rgba(124,92,252,0.3);border-radius:var(--radius);padding:50px 20px;text-align:center;cursor:pointer;transition:all .3s;background:var(--card);position:relative;overflow:hidden}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--card2);transform:translateY(-2px)}
+  .upload-zone.dragover{box-shadow:0 0 40px rgba(124,92,252,0.15)}
+  .upload-icon{font-size:3rem;margin-bottom:12px;display:block}
+  .upload-title{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+  .upload-hint{font-size:0.85rem;color:var(--text2)}
+  .upload-warning{font-size:0.75rem;color:var(--yellow);margin-top:8px}
+
+  /* Steps */
+  .steps{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .step{flex:1;min-width:120px;background:var(--card);border-radius:var(--radius-sm);padding:14px;text-align:center;border:1px solid rgba(255,255,255,0.05);transition:all .3s;opacity:0.4}
+  .step.active{opacity:1;border-color:var(--accent);box-shadow:0 0 20px rgba(124,92,252,0.1)}
+  .step.done{opacity:0.8;border-color:var(--green)}
+  .step.error{opacity:1;border-color:var(--red)}
+  .step-icon{font-size:1.4rem;display:block;margin-bottom:4px}
+  .step-label{font-size:0.8rem;color:var(--text2)}
+  .step.active .step-label{color:var(--accent2)}
+
+  /* Results */
+  .results{margin-top:24px;display:none}
+  .results.visible{display:block;animation:fadeIn .4s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  
+  .score-hero{display:flex;align-items:center;gap:20px;padding:24px;background:var(--card);border-radius:var(--radius);margin-bottom:16px;border:1px solid rgba(255,255,255,0.05)}
+  .score-circle{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;flex-shrink:0;position:relative}
+  .score-circle::before{content:'';position:absolute;inset:-4px;border-radius:50%;padding:3px;background:conic-gradient(var(--gradient-color,var(--accent)) calc(var(--score-pct,70)*1%),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px))}
+  .score-info{flex:1}
+  .score-label{font-size:0.85rem;color:var(--text2)}
+  .score-desc{font-size:0.9rem;color:var(--text2);margin-top:4px;line-height:1.5}
+
+  .dim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .dim-card{background:var(--card);border-radius:var(--radius-sm);padding:16px;border:1px solid rgba(255,255,255,0.05);transition:all .2s;cursor:default}
+  .dim-card:hover{border-color:rgba(124,92,252,0.2);transform:translateY(-1px)}
+  .dim-card.expanded{grid-column:1/-1}
+  .dim-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .dim-name{font-weight:600;font-size:0.95rem}
+  .dim-score{font-weight:700;font-size:1.1rem}
+  .dim-level{font-size:0.75rem;padding:2px 8px;border-radius:10px;font-weight:600}
+  .level-S{background:#7c5cfc22;color:var(--accent2)}
+  .level-A{background:#10b98122;color:var(--green)}
+  .level-B{background:#f59e0b22;color:var(--yellow)}
+  .level-C{background:#ef444422;color:var(--red)}
+  .dim-analysis{font-size:0.82rem;color:var(--text2);line-height:1.6;max-height:60px;overflow:hidden;transition:max-height .3s}
+  .dim-card.expanded .dim-analysis{max-height:2000px}
+  .dim-toggle{font-size:0.75rem;color:var(--accent2);cursor:pointer;margin-top:4px;display:inline-block;user-select:none}
+  .dim-meta{font-size:0.78rem;color:var(--text2);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05);display:none}
+  .dim-card.expanded .dim-meta{display:block}
+
+  .transcript-section{background:var(--card);border-radius:var(--radius);padding:16px;margin-top:16px;border:1px solid rgba(255,255,255,0.05)}
+  .transcript-section h3{font-size:0.9rem;margin-bottom:8px;color:var(--accent2)}
+  .transcript-text{font-size:0.82rem;color:var(--text2);line-height:1.8;max-height:200px;overflow-y:auto;white-space:pre-wrap}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+  .btn{padding:10px 24px;border-radius:24px;border:none;font-size:0.95rem;cursor:pointer;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px;font-family:var(--font)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,92,252,0.3)}
+  .btn-secondary{background:var(--card2);color:var(--text);border:1px solid rgba(255,255,255,0.1)}
+  .btn-secondary:hover{background:#1e1e55}
+
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--card);color:var(--text);padding:12px 24px;border-radius:24px;font-size:0.9rem;z-index:1000;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 30px rgba(0,0,0,0.4);animation:slideDown .3s ease;display:none}
+  .toast.error{border-color:var(--red);color:var(--red)}
+  .toast.show{display:block}
+  @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  .hidden{display:none!important}
+  .file-info{font-size:0.85rem;color:var(--accent2);margin-top:8px}
+  .spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .error-detail{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:16px;margin-top:12px;font-size:0.82rem;color:var(--red);line-height:1.6}
+  .error-detail code{background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-size:0.78rem;display:block;margin-top:8px;overflow-x:auto;white-space:pre-wrap;color:var(--text2)}
+
+  @media (max-width:600px){
+    .container{padding:12px}
+    .header{flex-direction:column;align-items:flex-start}
+    .key-input-area{width:100%}
+    .key-input-area input{width:100%}
+    .score-hero{flex-direction:column;text-align:center}
+    .dim-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🔬 爆款拆解机</div>
+    <div class="key-input-area">
+      <span class="key-dot" id="keyDot"></span>
+      <input type="password" id="apiKeyInput" placeholder="输入 StepFun API Key" autocomplete="off">
+      <button class="btn btn-secondary" style="padding:6px 14px;font-size:0.8rem" onclick="saveApiKey()">保存</button>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <span class="upload-icon">📤</span>
+    <div class="upload-title">点击上传或拖拽视频到此处</div>
+    <div class="upload-hint">支持 MP4 / MOV / AVI / WebM，最大 200MB</div>
+    <div class="upload-warning">⚠ 视频将通过 StepFun API 上传至云端进行分析，请勿上传敏感内容</div>
+    <div class="file-info hidden" id="fileInfo"></div>
+  </div>
+  <input type="file" id="fileInput" accept="video/*" class="hidden" onchange="handleFileSelect(this.files[0])">
+
+  <!-- Progress Steps -->
+  <div class="steps hidden" id="steps">
+    <div class="step" id="stepUpload"><span class="step-icon">⬆️</span><div class="step-label">上传视频</div></div>
+    <div class="step" id="stepAnalyze"><span class="step-icon">🔍</span><div class="step-label">AI分析中</div></div>
+    <div class="step" id="stepDone"><span class="step-icon">✅</span><div class="step-label">分析完成</div></div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-detail hidden" id="errorBox"></div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="score-hero">
+      <div class="score-circle" id="scoreCircle" style="--score-pct:0;--gradient-color:#ef4444">--</div>
+      <div class="score-info">
+        <div style="font-size:1.1rem;font-weight:700" id="resultStyle">--</div>
+        <div class="score-desc" id="resultSummary">等待分析...</div>
+      </div>
+    </div>
+    <div class="dim-grid" id="dimGrid"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="resetAll()">🔄 分析新视频</button>
+      <button class="btn btn-primary" id="btnGen" onclick="sendToGenerator()">🚀 生成相似内容</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIG
+// ============================================================
+const STEPFUN_BASE = 'https://api.stepfun.com/v1';
+const GENERATOR_URL = 'https://2e92e9b45d7c4bfb9f89f5eff9133f48.app.codebuddy.work';
+let currentAnalysis = null;
+let currentResultJson = null;
+
+// ============================================================
+//  ANALYSIS PROMPT (same as Python backend)
+// ============================================================
+const ANALYSIS_PROMPT = `你是一位顶级的短视频爆款分析专家。请仔细观看并分析这个视频的全部画面和音频内容，从以下6个维度进行深度剖析。
+
+【分析要求】
+请基于视频的真实画面和内容进行分析，不要编造或猜测。每个维度的分析必须引用视频中的具体画面、场景、文字、动作作为依据。
+
+【6个分析维度】
+
+1. **开头钩子 (Opening Hook)** — 前3秒的抓人程度
+   - 开头用了什么手法？（悬念/冲突/提问/反差/视觉冲击等）
+   - 钩子的强度和类型
+   - 如果是你会不会继续看？为什么？
+
+2. **脚本结构 (Script Structure)** — 内容组织逻辑
+   - 整体结构模式（如：黄金圈/SCQA/并列/递进/反转等）
+   - 节奏控制如何？
+   - 信息密度和逻辑衔接是否流畅？
+
+3. **情绪曲线 (Emotional Curve)** — 观众情绪牵引
+   - 视频的情绪走向是怎样的？（标注关键时间点）
+   - 哪些节点制造了情绪峰值？
+   - 整体的情绪节奏设计如何？
+
+4. **互动引导 (Interaction Guidance)** — 激发用户行为
+   - 有哪些引导点赞/评论/关注/转发的设计？
+   - 评论区引导策略如何？
+   - 互动钩子的自然程度？
+
+5. **数据预测 (Data Prediction)** — 爆款潜力预估
+   - 预估完播率
+   - 预估点赞率/评论率/转发率
+   - 预估整体传播潜力
+
+6. **内容公式 (Content Formula)** — 可复制性
+   - 提炼这个视频的内容公式/模板
+   - 核心要素有哪些？
+   - 其他人如何借鉴？
+
+【输出格式要求】
+请严格按照以下JSON格式输出，不要输出任何JSON之外的内容。所有分析必须用中文。
+
+\`\`\`json
+{
+  "overall_score": 85,
+  "viral_style": "情绪共鸣型",
+  "summary": "整体评价，2-3句话概括这个视频的爆款要素和核心亮点",
+
+  "opening_hook": {
+    "score": 90, "level": "S级",
+    "analysis": "详细分析开头的钩子设计...",
+    "hook_type": "悬念型/冲突型/提问型/反差型/视觉冲击型",
+    "key_moment": "0:00-0:03",
+    "improvement": "改进建议"
+  },
+
+  "script_structure": {
+    "score": 82, "level": "A级",
+    "analysis": "详细分析脚本结构...",
+    "structure_type": "SCQA/反转/递进/并列",
+    "key_moments": ["时间点1: 事件", "时间点2: 事件"],
+    "improvement": "改进建议"
+  },
+
+  "emotional_curve": {
+    "score": 88, "level": "A级",
+    "analysis": "详细分析情绪曲线...",
+    "curve_description": "情绪变化描述",
+    "peak_moments": [{"time": "0:15", "emotion": "惊讶", "intensity": 9, "description": "..."}],
+    "improvement": "改进建议"
+  },
+
+  "interaction_guide": {
+    "score": 75, "level": "B级",
+    "analysis": "详细分析互动引导设计...",
+    "cta_moments": [{"time": "0:30", "type": "点赞引导", "description": "..."}],
+    "improvement": "改进建议"
+  },
+
+  "data_prediction": {
+    "score": 80, "level": "A级",
+    "analysis": "详细数据预测分析...",
+    "estimated_completion_rate": 65,
+    "estimated_like_rate": 4.5,
+    "estimated_comment_rate": 1.2,
+    "estimated_share_rate": 2.0,
+    "viral_potential": "高/中/低",
+    "improvement": "改进建议"
+  },
+
+  "content_formula": {
+    "score": 85, "level": "A级",
+    "analysis": "详细内容公式分析...",
+    "formula_name": "公式名称",
+    "formula_template": "公式模板描述（可直接复用）",
+    "core_elements": ["要素1", "要素2", "要素3"],
+    "applicable_scenarios": ["场景1", "场景2"],
+    "improvement": "改进建议"
+  }
+}
+\`\`\`
+
+评分标准：
+- S级(90-100)：顶尖爆款水准
+- A级(75-89)：优质内容，有明显爆款基因
+- B级(60-74)：合格内容，有优化空间
+- C级(40-59)：普通内容，需要大幅改进
+- D级(0-39)：缺乏爆款元素
+
+请基于真实视频内容，给出客观、专业、有深度的分析。不要输出任何JSON之外的内容。`;
+
+// ============================================================
+//  API KEY MANAGEMENT
+// ============================================================
+function getApiKey() {
+  return sessionStorage.getItem('stepfun_key') || '';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showToast('请输入 API Key', true); return; }
+  sessionStorage.setItem('stepfun_key', key);
+  updateKeyDot();
+  showToast('✅ API Key 已保存（本次会话有效）');
+}
+
+function updateKeyDot() {
+  const dot = document.getElementById('keyDot');
+  const has = !!getApiKey();
+  dot.className = 'key-dot' + (has ? ' active' : '');
+  dot.title = has ? 'API Key 已设置' : '未设置 API Key';
+}
+
+// ============================================================
+//  JSON PARSING (4-layer robust, same as Python)
+// ============================================================
+function robustJsonParse(text) {
+  const original = text;
+  text = (text || '').trim();
+  
+  // Strategy 1: Direct parse
+  try { return JSON.parse(text); } catch(e) {}
+  
+  // Strategy 2: Extract from markdown code blocks
+  if (text.includes('```json')) {
+    text = text.split('```json')[1].split('```')[0].trim();
+  } else if (text.includes('```')) {
+    const parts = text.split('```');
+    if (parts.length >= 2) text = parts[1].trim();
+  }
+  try { return JSON.parse(text); } catch(e) {}
+  
+  // Strategy 3: Brace matching
+  const bs = text.indexOf('{');
+  const be = text.lastIndexOf('}');
+  if (bs >= 0 && be > bs) text = text.slice(bs, be + 1);
+  try { return JSON.parse(text); } catch(e) {}
+  
+  // Strategy 4: Repair common issues
+  text = text.replace(/,(\s*[}\]])/g, '$1');
+  try { return JSON.parse(text); } catch(e) {
+    throw new Error(`JSON解析失败。预览前300字: ${original.slice(0, 300)}`);
+  }
+}
+
+// ============================================================
+//  STEPFUN API CALLS
+// ============================================================
+async function uploadToStepFun(file, apiKey) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('purpose', 'storage');
+  
+  const resp = await fetch(`${STEPFUN_BASE}/files`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    body: formData
+  });
+  
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => 'Unknown');
+    throw new Error(`文件上传失败 (HTTP ${resp.status}): ${err}`);
+  }
+  
+  const data = await resp.json();
+  return `stepfile://${data.id}`;
+}
+
+async function analyzeWithStepFun(stepfileUrl, apiKey) {
+  const resp = await fetch(`${STEPFUN_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'step-3.7-flash',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'video_url', video_url: { url: stepfileUrl } },
+          { type: 'text', text: ANALYSIS_PROMPT }
+        ]
+      }],
+      reasoning_effort: 'high',
+      max_tokens: 8192
+    })
+  });
+  
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => 'Unknown');
+    throw new Error(`AI分析失败 (HTTP ${resp.status}): ${err}`);
+  }
+  
+  const data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+// ============================================================
+//  FILE HANDLING
+// ============================================================
+function handleFileSelect(file) {
+  if (!file) return;
+  
+  const key = getApiKey();
+  if (!key) { showToast('请先输入并保存 StepFun API Key', true); return; }
+  
+  // Size check
+  const sizeMB = file.size / (1024 * 1024);
+  if (sizeMB > 200) { showToast('文件过大（最大200MB），请压缩后再上传', true); return; }
+  
+  document.getElementById('fileInfo').textContent = `已选择: ${file.name} (${sizeMB.toFixed(1)}MB)`;
+  document.getElementById('fileInfo').classList.remove('hidden');
+  
+  startAnalysis(file);
+}
+
+async function startAnalysis(file) {
+  const key = getApiKey();
+  const steps = document.getElementById('steps');
+  const upload = document.getElementById('uploadZone');
+  const errorBox = document.getElementById('errorBox');
+  const results = document.getElementById('results');
+  
+  steps.classList.remove('hidden');
+  results.classList.remove('visible');
+  errorBox.classList.add('hidden');
+  upload.style.opacity = '0.5';
+  upload.style.pointerEvents = 'none';
+  
+  // Reset steps
+  ['stepUpload','stepAnalyze','stepDone'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'step';
+  });
+  
+  try {
+    // Step 1: Upload
+    setStep('stepUpload', 'active', '⬆️ 上传中...');
+    const stepfileUrl = await uploadToStepFun(file, key);
+    setStep('stepUpload', 'done', '✅ 上传完成');
+    
+    // Step 2: Analyze
+    setStep('stepAnalyze', 'active', '🔍 AI分析中（约30-60秒）...');
+    const startTime = Date.now();
+    const rawContent = await analyzeWithStepFun(stepfileUrl, key);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+    setStep('stepAnalyze', 'done', `✅ 分析完成 (${elapsed}秒)`);
+    
+    // Parse
+    const result = robustJsonParse(rawContent);
+    currentResultJson = result;
+    
+    // Build analysis object
+    currentAnalysis = {
+      viral_style: result.viral_style || '未分类',
+      overall_score: result.overall_score || 0,
+      summary: result.summary || '',
+      result_json: result,
+      transcript_text: '',
+    };
+    
+    setStep('stepDone', 'done', '✅ 生成报告');
+    
+    // Show results
+    renderResults(result);
+    results.classList.add('visible');
+    results.scrollIntoView({ behavior: 'smooth' });
+    
+  } catch (err) {
+    console.error('Analysis error:', err);
+    setStep('stepAnalyze', 'error', '❌ 失败');
+    setStep('stepDone', 'error', '❌ 未完成');
+    
+    const detail = err.message || String(err);
+    let help = '';
+    if (detail.includes('Failed to fetch') || detail.includes('NetworkError')) {
+      help = '\n\n💡 这通常是网络/CORS问题。StepFun API 可能不允许浏览器直接调用。\n请尝试: 1) 使用 VPN  2) 在本地运行完整的 Python 后端版本';
+    }
+    if (detail.includes('401') || detail.includes('403')) {
+      help = '\n\n💡 API Key 无效或已过期，请检查后重新输入';
+    }
+    
+    errorBox.innerHTML = `<strong>❌ 分析失败</strong><br>${detail}${help}`;
+    errorBox.classList.remove('hidden');
+    
+    upload.style.opacity = '1';
+    upload.style.pointerEvents = 'auto';
+  }
+}
+
+function setStep(id, cls, label) {
+  const el = document.getElementById(id);
+  el.className = 'step ' + cls;
+  const lbl = el.querySelector('.step-label');
+  if (lbl) lbl.textContent = label;
+}
+
+// ============================================================
+//  RESULTS RENDERING
+// ============================================================
+function renderResults(result) {
+  // Score circle
+  const score = result.overall_score || 0;
+  const sc = document.getElementById('scoreCircle');
+  sc.textContent = score;
+  sc.style.setProperty('--score-pct', score);
+  
+  let gradColor;
+  if (score >= 90) gradColor = '#7c5cfc';
+  else if (score >= 75) gradColor = '#10b981';
+  else if (score >= 60) gradColor = '#f59e0b';
+  else gradColor = '#ef4444';
+  sc.style.setProperty('--gradient-color', gradColor);
+  sc.style.color = gradColor;
+  
+  document.getElementById('resultStyle').textContent = result.viral_style || '未分类';
+  document.getElementById('resultSummary').textContent = result.summary || '';
+  
+  // Dimension cards
+  const dims = [
+    { key: 'opening_hook', icon: '🎣', name: '开头钩子' },
+    { key: 'script_structure', icon: '📝', name: '脚本结构' },
+    { key: 'emotional_curve', icon: '📈', name: '情绪曲线' },
+    { key: 'interaction_guide', icon: '💬', name: '互动引导' },
+    { key: 'data_prediction', icon: '📊', name: '数据预测' },
+    { key: 'content_formula', icon: '🧩', name: '内容公式' },
+  ];
+  
+  const grid = document.getElementById('dimGrid');
+  grid.innerHTML = dims.map(d => {
+    const data = result[d.key] || {};
+    const s = data.score || 0;
+    const level = data.level || '--';
+    const lvlClass = 'level-' + (level.charAt(0) || 'C');
+    return `<div class="dim-card" onclick="toggleCard(this)">
+      <div class="dim-header">
+        <span class="dim-name">${d.icon} ${d.name}</span>
+        <span><span class="dim-score" style="color:${s>=90?'var(--accent2)':s>=75?'var(--green)':s>=60?'var(--yellow)':'var(--red)'}">${s}</span><span class="dim-level ${lvlClass}">${level}</span></span>
+      </div>
+      <div class="dim-analysis">${(data.analysis||'').replace(/\n/g,'<br>')}</div>
+      <span class="dim-toggle">展开详情 ▾</span>
+      <div class="dim-meta">${renderMeta(d.key, data)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMeta(key, data) {
+  let html = '';
+  if (key === 'opening_hook') {
+    if (data.hook_type) html += `钩子类型: ${data.hook_type}<br>`;
+    if (data.key_moment) html += `关键时刻: ${data.key_moment}<br>`;
+  }
+  if (key === 'script_structure') {
+    if (data.structure_type) html += `结构类型: ${data.structure_type}<br>`;
+    if (data.key_moments && data.key_moments.length) html += `关键节点: ${data.key_moments.join(' · ')}<br>`;
+  }
+  if (key === 'emotional_curve') {
+    if (data.curve_description) html += `情绪描述: ${data.curve_description}<br>`;
+    if (data.peak_moments && data.peak_moments.length) {
+      html += '情绪峰值: ' + data.peak_moments.map(p => `${p.time} ${p.emotion}(${p.intensity}/10)`).join(' → ') + '<br>';
+    }
+  }
+  if (key === 'interaction_guide') {
+    if (data.cta_moments && data.cta_moments.length) html += 'CTA节点: ' + data.cta_moments.map(c => `${c.time} ${c.type}`).join(' · ') + '<br>';
+  }
+  if (key === 'data_prediction') {
+    if (data.estimated_completion_rate) html += `预估完播率: ${data.estimated_completion_rate}%<br>`;
+    if (data.estimated_like_rate) html += `预估点赞率: ${data.estimated_like_rate}% · `;
+    if (data.estimated_comment_rate) html += `评论率: ${data.estimated_comment_rate}%<br>`;
+    if (data.viral_potential) html += `传播潜力: ${data.viral_potential}<br>`;
+  }
+  if (key === 'content_formula') {
+    if (data.formula_name) html += `公式名称: ${data.formula_name}<br>`;
+    if (data.formula_template) html += `模板: ${data.formula_template}<br>`;
+    if (data.core_elements && data.core_elements.length) html += `核心要素: ${data.core_elements.join('、')}<br>`;
+    if (data.applicable_scenarios && data.applicable_scenarios.length) html += `适用场景: ${data.applicable_scenarios.join('、')}<br>`;
+  }
+  if (data.improvement) html += `<span style="color:var(--accent2)">💡 改进建议: ${data.improvement}</span>`;
+  return html || '<span style="color:var(--text2)">暂无更多信息</span>';
+}
+
+function toggleCard(card) {
+  card.classList.toggle('expanded');
+  const toggle = card.querySelector('.dim-toggle');
+  toggle.textContent = card.classList.contains('expanded') ? '收起 ▲' : '展开详情 ▾';
+}
+
+// ============================================================
+//  SEND TO GENERATOR (mirrors backend/static integration)
+// ============================================================
+function sendToGenerator() {
+  if (!currentAnalysis) { showToast('暂无分析数据', true); return; }
+  const rj = currentAnalysis.result_json || {};
+  const payload = {
+    from: 'analyzer',
+    viral_style: currentAnalysis.viral_style || '',
+    overall_score: currentAnalysis.overall_score || 0,
+    summary: currentAnalysis.summary || '',
+    opening_hook: rj.opening_hook || {},
+    script_structure: rj.script_structure || {},
+    emotional_curve: rj.emotional_curve || {},
+    interaction_guide: rj.interaction_guide || {},
+    data_prediction: rj.data_prediction || {},
+    content_formula: rj.content_formula || {},
+  };
+  const json = encodeURIComponent(JSON.stringify(payload));
+  const encoded = btoa(json);
+  window.open(GENERATOR_URL + '#analysis=' + encoded, '_blank');
+}
+
+// ============================================================
+//  RESET
+// ============================================================
+function resetAll() {
+  currentAnalysis = null;
+  currentResultJson = null;
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('steps').classList.add('hidden');
+  document.getElementById('errorBox').classList.add('hidden');
+  document.getElementById('fileInfo').classList.add('hidden');
+  document.getElementById('uploadZone').style.opacity = '1';
+  document.getElementById('uploadZone').style.pointerEvents = 'auto';
+  document.getElementById('fileInput').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+//  DRAG & DROP
+// ============================================================
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('video/')) handleFileSelect(file);
+  else showToast('请上传视频文件', true);
+});
+
+// ============================================================
+//  TOAST
+// ============================================================
+function showToast(msg, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+(function init() {
+  const saved = sessionStorage.getItem('stepfun_key');
+  if (saved) {
+    document.getElementById('apiKeyInput').value = saved;
+  }
+  updateKeyDot();
+})();
+</script>
+</body>
+</html>
