@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: baokuan-analyzer
+    env: python
+    buildCommand: |
+      apt-get update && apt-get install -y ffmpeg
+      pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+    plan: free

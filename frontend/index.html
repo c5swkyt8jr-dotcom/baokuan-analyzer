@@ -1,0 +1,3047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>爆款生成器 · Viral Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #E24B4A; --red-light: #fff0f0; --red-dark: #c0392b;
+    --bg: #f5f4f0; --card: #ffffff; --border: #e8e6e0;
+    --text: #1a1a1a; --text2: #555; --text3: #888; --text4: #aaa;
+    --accent: #185FA5; --green: #27ae60; --purple: #8e44ad;
+  }
+  body { font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ===== HEADER ===== */
+  .header { background: #fff; border-bottom: 1px solid var(--border); padding: 0 28px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 30px; height: 30px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; font-weight: 700; }
+  .logo-text { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-text b { color: var(--red); }
+  .header-tabs { display: flex; gap: 2px; background: #f5f4f0; padding: 3px; border-radius: 10px; }
+  .tab-btn { padding: 7px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; background: transparent; color: var(--text2); transition: all 0.18s; font-weight: 500; }
+  .tab-btn.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .sync-btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text2); display: flex; align-items: center; gap: 5px; transition: all 0.15s; }
+  .sync-btn:hover { border-color: var(--red); color: var(--red); }
+  .sync-btn.syncing { pointer-events: none; opacity: 0.6; }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ===== FILTERS ===== */
+  .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-label { font-size: 12px; color: var(--text3); font-weight: 500; min-width: 42px; }
+  .chip { padding: 5px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text2); transition: all 0.15s; white-space: nowrap; user-select: none; }
+  .chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .chip:hover:not(.active) { border-color: #bbb; }
+  .chip.red.active { background: var(--red); border-color: var(--red); }
+  .chip.blue.active { background: var(--accent); border-color: var(--accent); }
+
+  .platform-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  .pf { padding: 5px 13px; border-radius: 18px; font-size: 12px; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text2); transition: all 0.15s; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+  .pf.active { color: #fff; border-color: transparent; }
+  .pf[data-p="全部"].active { background: var(--text); }
+  .pf[data-p="抖音"].active { background: #000; }
+  .pf[data-p="小红书"].active { background: var(--red); }
+  .pf[data-p="YouTube"].active { background: #FF0000; }
+  .pf[data-p="TikTok"].active { background: #010101; }
+  .pf[data-p="Instagram"].active { background: #C13584; }
+  .pf .pf-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .pf[data-p="抖音"] .pf-dot { background: #000; }
+  .pf[data-p="小红书"] .pf-dot { background: var(--red); }
+  .pf[data-p="YouTube"] .pf-dot { background: #FF0000; }
+  .pf[data-p="TikTok"] .pf-dot { background: #010101; }
+  .pf[data-p="Instagram"] .pf-dot { background: #C13584; }
+  .pf.active .pf-dot { background: #fff; }
+
+  /* ===== TREND CARDS ===== */
+  .trends-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .trend-card { background: var(--card); border-radius: 14px; border: 1.5px solid var(--border); padding: 0; overflow: hidden; transition: all 0.18s; cursor: pointer; position: relative; }
+  .trend-card:hover { border-color: #ccc; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  .trend-card.selected { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-light); }
+  .trend-card .card-rank { position: absolute; top: 12px; left: 14px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.45); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; }
+  .trend-card .card-rank.hot { background: var(--red); }
+  .card-body { padding: 16px 16px 14px; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px; }
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .ctag { font-size: 11px; padding: 2px 8px; border-radius: 9px; font-weight: 500; }
+  .ctag-cat { background: #f0efe9; color: var(--text2); }
+  .ctag-pf { color: #fff; }
+  .heat-bar { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .heat-val { font-size: 11px; color: var(--red); font-weight: 600; }
+  .heat-icon { font-size: 10px; }
+  .card-title { font-size: 14.5px; font-weight: 600; line-height: 1.55; margin-bottom: 7px; color: var(--text); }
+  .card-desc { font-size: 12.5px; color: var(--text3); line-height: 1.7; margin-bottom: 12px; }
+  .card-reason { font-size: 12px; color: var(--accent); background: #f0f5fb; padding: 7px 10px; border-radius: 8px; line-height: 1.6; margin-bottom: 12px; }
+  .card-links { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .card-link { font-size: 12px; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 5px; transition: color 0.12s; }
+  .card-link:hover { color: var(--red); text-decoration: underline; }
+  .card-link::before { content: '▶'; font-size: 9px; }
+  .card-actions { display: flex; gap: 8px; }
+  .cbtn { padding: 6px 13px; font-size: 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text2); transition: all 0.13s; font-weight: 500; }
+  .cbtn:hover { border-color: #aaa; }
+  .cbtn.primary { background: var(--text); color: #fff; border-color: var(--text); }
+  .cbtn.primary:hover { background: #333; }
+  .cbtn.accent { background: var(--red); color: #fff; border-color: var(--red); }
+  .cbtn.accent:hover { background: var(--red-dark); }
+
+  /* ===== TOPIC FACTORY ===== */
+  .tf-header { display: flex; gap: 14px; align-items: flex-end; margin-bottom: 22px; flex-wrap: wrap; }
+  .tf-group { display: flex; flex-direction: column; gap: 5px; }
+  .tf-label { font-size: 12px; color: var(--text3); font-weight: 500; }
+  .tf-select { padding: 8px 14px; border-radius: 9px; border: 1.5px solid var(--border); font-size: 13px; background: var(--card); color: var(--text); cursor: pointer; min-width: 140px; }
+  .tf-input { padding: 8px 14px; border-radius: 9px; border: 1.5px solid var(--border); font-size: 13px; background: var(--card); color: var(--text); width: 220px; }
+  .tf-input::placeholder { color: var(--text4); }
+  .btn { padding: 9px 22px; border-radius: 9px; font-size: 13px; cursor: pointer; border: none; transition: all 0.15s; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary:hover { background: #333; }
+  .btn-accent { background: var(--red); color: #fff; }
+  .btn-accent:hover { background: var(--red-dark); }
+  .btn-purple { background: linear-gradient(135deg, #7C3AED, #A855F7); color: #fff; font-size:13px; font-weight:600; padding: 9px 20px; border-radius: 10px; border: none; cursor: pointer; transition: all 0.15s; }
+  .btn-purple:hover { background: linear-gradient(135deg, #6D28D9, #9333EA); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(124,58,237,0.3); }
+  .btn-outline { background: var(--card); border: 1.5px solid var(--border); color: var(--text2); }
+  .btn-outline:hover { border-color: #aaa; background: #fafaf6; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text2); transition: all 0.13s; font-weight: 500; }
+  .btn-sm:hover { border-color: #aaa; }
+  .btn-sm.primary { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-sm.primary:hover { background: var(--red-dark); }
+
+  .topic-list { display: flex; flex-direction: column; gap: 12px; }
+  .topic-card { background: var(--card); border-radius: 13px; border: 1.5px solid var(--border); padding: 18px; transition: all 0.18s; cursor: pointer; }
+  .topic-card:hover { border-color: #bbb; box-shadow: 0 3px 12px rgba(0,0,0,0.05); }
+  .topic-card.selected { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-light); }
+  .topic-card.ai-route-card { border: 2px dashed #8B5CF6; background: linear-gradient(135deg,#faf5ff,#f5f3ff); cursor: default; }
+  .topic-card.ai-route-card:hover { border-color: #7C3AED; box-shadow: 0 4px 16px rgba(139,92,246,0.15); }
+  .topic-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .topic-left { display: flex; gap: 12px; align-items: flex-start; flex: 1; }
+  .topic-num { font-size: 12px; color: var(--text4); font-weight: 600; min-width: 24px; padding-top: 2px; }
+  .topic-main { flex: 1; }
+  .topic-title { font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 5px; }
+  .topic-reason { font-size: 12.5px; color: var(--text3); line-height: 1.7; margin-bottom: 10px; }
+  .topic-outline { background: #f8f7f3; border-radius: 9px; padding: 11px 14px; margin-bottom: 10px; }
+  .topic-outline-title { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .topic-outline-list { font-size: 12.5px; color: var(--text2); line-height: 1.8; padding-left: 16px; }
+  .topic-shoot { background: #f0f5fb; border-radius: 9px; padding: 11px 14px; margin-bottom: 10px; }
+  .topic-shoot-title { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 6px; }
+  .topic-shoot-list { font-size: 12.5px; color: var(--text2); line-height: 1.8; }
+  .topic-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ttag { font-size: 11px; padding: 3px 9px; border-radius: 8px; background: #f0efe9; color: var(--text2); }
+  .topic-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+  .action-bar { position: sticky; bottom: 0; background: var(--card); border-top: 1.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px -24px -60px; z-index: 10; }
+  .selected-info { font-size: 13px; color: var(--text2); }
+  .selected-info b { color: var(--text); }
+
+  /* ===== SCRIPT WORKSHOP ===== */
+  .sw-layout { display: grid; grid-template-columns: 290px 1fr; gap: 18px; }
+  @media (max-width: 800px) { .sw-layout { grid-template-columns: 1fr; } }
+  .sw-sidebar { display: flex; flex-direction: column; gap: 14px; }
+  .sw-card { background: var(--card); border-radius: 13px; border: 1.5px solid var(--border); padding: 15px; }
+  .sw-card-title { font-size: 12px; color: var(--text3); font-weight: 600; margin-bottom: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .sw-topic { font-size: 13.5px; font-weight: 600; line-height: 1.5; color: var(--text); padding: 10px; background: #f8f7f3; border-radius: 9px; }
+  .sw-topic.empty { color: var(--text4); font-weight: 400; font-style: italic; }
+  .mode-btns { display: flex; flex-direction: column; gap: 7px; }
+  .mode-btn { padding: 10px 14px; border-radius: 9px; font-size: 13px; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text2); text-align: left; transition: all 0.15s; font-weight: 500; }
+  .mode-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .mode-btn:hover:not(.active) { background: #fafaf6; }
+  .ref-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .ref-item { font-size: 12px; padding: 8px 11px; background: #f8f7f3; border-radius: 8px; cursor: pointer; line-height: 1.5; color: var(--text2); border: 1.5px solid transparent; transition: all 0.13s; }
+  .ref-item:hover { border-color: #ccc; background: var(--card); }
+  .ref-item.selected { border-color: var(--red); background: var(--red-light); color: var(--text); }
+  .sw-main { display: flex; flex-direction: column; gap: 14px; }
+  .sw-toolbar { background: var(--card); border-radius: 13px; border: 1.5px solid var(--border); padding: 13px 17px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .sw-toolbar-label { font-size: 12px; color: var(--text3); font-weight: 500; }
+  .sw-duration-select { padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 12px; background: var(--card); color: var(--text); cursor: pointer; }
+  .sw-content { background: var(--card); border-radius: 13px; border: 1.5px solid var(--border); overflow: hidden; }
+  .sw-content-header { padding: 13px 17px; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .sw-content-title { font-size: 13.5px; font-weight: 600; }
+  .sw-body { padding: 17px; }
+  .sw-placeholder { padding: 50px 20px; text-align: center; color: var(--text4); font-size: 14px; }
+  .sw-placeholder p { margin-bottom: 8px; }
+
+  /* ===== SCRIPT SCENE ===== */
+  .scene-card { border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; transition: border-color 0.15s; }
+  .scene-card:hover { border-color: #bbb; }
+  .scene-header { padding: 10px 15px; background: #f8f7f3; display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); }
+  .scene-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .scene-time { font-size: 11px; color: var(--text3); background: var(--card); padding: 2px 8px; border-radius: 7px; }
+  .scene-body { padding: 14px 15px; }
+  .scene-row { display: grid; grid-template-columns: 68px 1fr; gap: 9px; margin-bottom: 9px; }
+  .scene-row:last-child { margin-bottom: 0; }
+  .scene-key { font-size: 11px; color: var(--text4); padding-top: 2px; font-weight: 500; }
+  .scene-val { font-size: 13px; color: var(--text); line-height: 1.65; }
+  .scene-val.highlight { color: var(--red); font-weight: 500; }
+  .scene-val.ref { color: var(--accent); font-size: 12px; }
+  .scene-regen { margin-top: 10px; display: flex; gap: 8px; }
+  .analysis-box { background: #f8f7f3; border-radius: 10px; padding: 13px 15px; margin-bottom: 14px; border-left: 3px solid var(--red); }
+  .analysis-title { font-size: 12px; font-weight: 600; color: var(--red); margin-bottom: 7px; }
+  .analysis-text { font-size: 12.5px; color: var(--text2); line-height: 1.7; }
+
+  /* ===== AI POLISH PROMPT ===== */
+  .ai-polish-box { margin-top: 16px; border: 1px solid #e0d8e8; border-radius: 12px; overflow: hidden; }
+  .ai-polish-header { padding: 11px 16px; background: #f5f0fa; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b3fa0; display: flex; justify-content: space-between; align-items: center; }
+  .ai-polish-header:hover { background: #ebe2f8; }
+  .ai-polish-arrow { font-size: 10px; transition: transform 0.2s; }
+  .ai-polish-box.expanded .ai-polish-arrow { transform: rotate(90deg); }
+  .ai-polish-body { display: none; padding: 14px 16px 16px 16px; }
+  .ai-polish-box.expanded .ai-polish-body { display: block; }
+  .ai-prompt-box { background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; padding: 12px 14px; font-size: 12.5px; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; color: #444; line-height: 1.55; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; }
+
+  /* ===== TITLE OPTIONS ===== */
+  .title-options { background: #f8f7f3; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .title-options-header { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 7px; }
+  .title-option { font-size: 13px; color: var(--text); padding: 6px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+  .title-option:last-child { border-bottom: none; }
+  .title-option .hot-badge { font-size: 10px; background: var(--red); color: #fff; padding: 1px 6px; border-radius: 7px; margin-left: 6px; }
+
+  /* ===== EMPTY / LOADING ===== */
+  .empty-state { text-align: center; padding: 60px 20px; background: var(--card); border-radius: 14px; border: 1.5px solid var(--border); }
+  .empty-icon { font-size: 42px; margin-bottom: 14px; }
+  .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 7px; }
+  .empty-desc { font-size: 13px; color: var(--text3); }
+  .loading-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 6px; }
+  .loading-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); animation: load 1.2s infinite; }
+  .loading-dot:nth-child(2) { animation-delay: 0.18s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes load { 0%,80%,100% { opacity: 0.2; transform: scale(0.7); } 40% { opacity: 1; transform: scale(1); } }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+  
+  /* ===== API CONFIG PANEL ===== */
+  .api-config-card { background: var(--card); border-radius: 13px; border: 1.5px solid var(--border); overflow: hidden; }
+  .api-config-header { padding: 11px 15px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text3); display: flex; justify-content: space-between; align-items: center; background: #fafaf6; border-bottom: 1.5px solid transparent; transition: all 0.15s; }
+  .api-config-header:hover { color: var(--text); }
+  .api-config-card.expanded .api-config-header { border-bottom-color: var(--border); color: var(--text); }
+  .api-config-arrow { font-size: 10px; transition: transform 0.2s; }
+  .api-config-card.expanded .api-config-arrow { transform: rotate(90deg); }
+  .api-config-body { display: none; padding: 13px 15px; }
+  .api-config-card.expanded .api-config-body { display: block; }
+  .api-field { margin-bottom: 10px; }
+  .api-field:last-child { margin-bottom: 0; }
+  .api-field-label { font-size: 10.5px; color: var(--text4); font-weight: 600; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .api-field select, .api-field input { width: 100%; padding: 7px 10px; border-radius: 7px; border: 1.5px solid var(--border); font-size: 12px; background: var(--card); color: var(--text); }
+  .api-field input::placeholder { color: #ccc; font-size: 11px; }
+  .api-status { font-size: 11px; padding: 6px 10px; border-radius: 7px; margin-top: 8px; text-align: center; }
+  .api-status.ready { background: #e8f5e9; color: #2e7d32; }
+  .api-status.empty { background: #fafaf6; color: var(--text4); }
+  .api-modules { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  .api-module-title { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 7px; }
+  .api-module-row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; font-size: 11px; }
+  .api-module-row:last-child { margin-bottom: 0; }
+  .api-module-label { color: var(--text2); min-width: 48px; font-weight: 500; }
+  .api-module-row select { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 11px; background: var(--card); color: var(--text); }
+  .api-module-row input[type=range] { flex:1; }
+  .api-temp-val { font-size: 10px; color: var(--text4); min-width: 28px; text-align: right; }
+
+  /* ===== DEEP SCRIPT OUTPUT ===== */
+  .deep-script-wrap { padding: 17px; }
+  .deep-stage-indicator { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f8f7f3; border-radius: 10px; margin-bottom: 16px; }
+  .deep-stage-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; transition: all 0.3s; }
+  .deep-stage-dot.active { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse-dot 0.8s infinite; }
+  .deep-stage-dot.done { background: var(--green); }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .deep-stage-text { font-size: 12px; color: var(--text3); }
+  .deep-stage-text.active { color: var(--text); font-weight: 600; }
+
+  .deep-hooks-section { margin-bottom: 18px; background: linear-gradient(135deg, #fff5f5, #fff0f0); border-radius: 12px; padding: 16px; border-left: 3px solid var(--red); }
+  .deep-hooks-title { font-size: 12px; font-weight: 700; color: var(--red); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .deep-hook-item { font-size: 13px; color: var(--text); padding: 8px 0; border-bottom: 1px dashed #f0d0d0; line-height: 1.6; }
+  .deep-hook-item:last-child { border-bottom: none; }
+  .deep-hook-item .hook-tag { font-size: 10px; background: var(--red); color: #fff; padding: 1px 7px; border-radius: 8px; margin-left: 6px; }
+
+  .deep-scene-card { background: var(--card); border-radius: 12px; border: 1.5px solid var(--border); margin-bottom: 14px; overflow: hidden; }
+  .deep-scene-header { padding: 10px 15px; background: #f8f7f3; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .deep-scene-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .deep-scene-time { font-size: 11px; color: var(--text3); background: var(--card); padding: 2px 8px; border-radius: 7px; }
+  .deep-scene-body { padding: 14px 15px; }
+  .deep-scene-table { width: 100%; border-collapse: collapse; }
+  .deep-scene-table td { padding: 6px 10px; font-size: 12.5px; line-height: 1.65; vertical-align: top; border-bottom: 1px solid #f5f4f0; }
+  .deep-scene-table td:first-child { color: var(--text4); font-size: 11px; font-weight: 500; min-width: 60px; white-space: nowrap; }
+  .deep-scene-table td:last-child { color: var(--text); }
+  .deep-scene-table tr:last-child td { border-bottom: none; }
+  .deep-vocal { color: var(--red) !important; font-weight: 500; background: #fff8f8; border-radius: 4px; padding: 2px 6px; }
+
+  .deep-titles-section { margin-top: 18px; background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-radius: 12px; padding: 16px; border-left: 3px solid #8b5cf6; }
+  .deep-titles-title { font-size: 12px; font-weight: 700; color: #6d28d9; margin-bottom: 8px; }
+  .deep-title-item { font-size: 14px; color: var(--text); padding: 8px 0; border-bottom: 1px dashed #ddd6fe; line-height: 1.6; font-weight: 600; }
+  .deep-title-item:last-child { border-bottom: none; }
+  .deep-title-item .title-score { font-size: 10px; background: #8b5cf6; color: #fff; padding: 1px 7px; border-radius: 8px; margin-left: 6px; }
+
+  .deep-compliance { margin-top: 18px; background: #fffbeb; border-radius: 12px; padding: 14px 16px; border-left: 3px solid #f59e0b; }
+  .deep-compliance-title { font-size: 12px; font-weight: 700; color: #d97706; margin-bottom: 6px; }
+  .deep-compliance-text { font-size: 12px; color: #92400e; line-height: 1.7; }
+
+  .deep-actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .deep-btn { padding: 8px 18px; border-radius: 9px; font-size: 13px; cursor: pointer; border: none; transition: all 0.15s; font-weight: 500; }
+  .deep-btn-primary { background: var(--red); color: #fff; }
+  .deep-btn-primary:hover { background: var(--red-dark); }
+  .deep-btn-outline { background: var(--card); border: 1.5px solid var(--border); color: var(--text2); }
+  .deep-btn-outline:hover { border-color: #aaa; }
+  .deep-btn-ai { background: linear-gradient(135deg, #7C3AED, #A855F7); color: #fff; }
+  .deep-btn-ai:hover { background: linear-gradient(135deg, #6D28D9, #9333EA); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(124,58,237,0.3); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px) {
+    .header { padding: 0 14px; }
+    .header-tabs { padding: 2px; }
+    .tab-btn { padding: 6px 11px; font-size: 12px; }
+    .container { padding: 16px 12px 60px; }
+    .trends-grid { grid-template-columns: 1fr; }
+    .deep-scene-table td:first-child { min-width: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">V</div>
+    <div class="logo-text"><b>爆款</b>生成器</div>
+  </div>
+  <div class="header-tabs">
+    <button class="tab-btn active" onclick="switchTab('trends', this)">趋势雷达</button>
+    <button class="tab-btn" onclick="switchTab('topics', this)">选题工厂</button>
+    <button class="tab-btn" onclick="switchTab('script', this)">脚本车间</button>
+  </div>
+  <div class="header-right">
+    <button class="sync-btn" onclick="fetchTrends(this)" id="sync-btn">
+      <span>🔄</span> 同步热点
+    </button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== TAB 1: 趋势雷达 ===== -->
+  <div id="tab-trends" class="section active">
+    <div class="filter-row">
+      <span class="filter-label">垂类</span>
+      <button class="chip active" onclick="filterCat(this,'全部')">全部</button>
+      <button class="chip" onclick="filterCat(this,'舞蹈')">舞蹈</button>
+      <button class="chip" onclick="filterCat(this,'颜值')">颜值</button>
+      <button class="chip" onclick="filterCat(this,'Vlog')">Vlog</button>
+      <button class="chip" onclick="filterCat(this,'美食')">美食</button>
+      <button class="chip" onclick="filterCat(this,'穿搭')">穿搭</button>
+      <button class="chip" onclick="filterCat(this,'科技')">科技</button>
+      <button class="chip" onclick="filterCat(this,'情感')">情感</button>
+      <button class="chip" onclick="filterCat(this,'搞笑')">搞笑</button>
+      <button class="chip" onclick="filterCat(this,'健身')">健身</button>
+      <button class="chip" onclick="filterCat(this,'旅行')">旅行</button>
+      <button class="chip" onclick="filterCat(this,'短剧')">短剧</button>
+      <button class="chip" onclick="filterCat(this,'体育')">体育</button>
+    </div>
+    <div class="platform-row">
+      <span class="filter-label">平台</span>
+      <button class="pf active" data-p="全部" onclick="filterPf(this,'全部')"><span class="pf-dot"></span>全部</button>
+      <button class="pf" data-p="抖音" onclick="filterPf(this,'抖音')"><span class="pf-dot"></span>抖音</button>
+      <button class="pf" data-p="小红书" onclick="filterPf(this,'小红书')"><span class="pf-dot"></span>小红书</button>
+      <button class="pf" data-p="YouTube" onclick="filterPf(this,'YouTube')"><span class="pf-dot"></span>YouTube</button>
+      <button class="pf" data-p="TikTok" onclick="filterPf(this,'TikTok')"><span class="pf-dot"></span>TikTok</button>
+      <button class="pf" data-p="Instagram" onclick="filterPf(this,'Instagram')"><span class="pf-dot"></span>Instagram</button>
+    </div>
+    <div class="sort-row" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <span class="filter-label">排序</span>
+      <button class="chip active" id="sort-heat" onclick="setSort('heat',this)">🔥 热度</button>
+      <button class="chip" id="sort-likes" onclick="setSort('likes',this)">👍 点赞量</button>
+      <button class="chip" id="sort-date" onclick="setSort('date',this)">🕐 最新发布</button>
+      <span style="font-size:11px;color:#888;margin-left:4px;">| 数据更新：2026-06-18 13:30</span>
+    </div>
+    <div id="trends-grid" class="trends-grid"></div>
+  </div>
+
+  <!-- ===== TAB 2: 选题工厂 ===== -->
+  <div id="tab-topics" class="section">
+    <div class="tf-header">
+      <div class="tf-group">
+        <span class="tf-label">垂类方向</span>
+        <select class="tf-select" id="topic-cat">
+          <option>舞蹈</option><option>颜值</option><option>Vlog</option><option>美食</option>
+          <option>穿搭</option><option>科技</option><option>情感</option><option>搞笑</option>
+          <option>健身</option><option>旅行</option><option>短剧</option><option>体育</option><option>融合垂类</option>
+        </select>
+      </div>
+      <div class="tf-group">
+        <span class="tf-label">目标平台</span>
+        <select class="tf-select" id="topic-platform">
+          <option>抖音</option><option>小红书</option><option>TikTok</option>
+          <option>YouTube Shorts</option><option>全平台通用</option>
+        </select>
+      </div>
+      <div class="tf-group">
+        <span class="tf-label">内容时长</span>
+        <select class="tf-select" id="topic-duration">
+          <option>15秒以内</option><option selected>30-60秒</option><option>1-3分钟</option><option>3分钟以上</option>
+        </select>
+      </div>
+      <div class="tf-group">
+        <span class="tf-label">自定义想法</span>
+        <input class="tf-input" id="topic-idea" placeholder="描述你的想法（可选）">
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <button class="btn btn-accent" onclick="generateTopics()">✦ 生成选题</button>
+        <button class="btn btn-outline" onclick="refreshTopics()">🔄 换一批</button>
+      </div>
+    </div>
+    <div id="topics-container"></div>
+    <div id="topic-action-bar" class="action-bar" style="display:none;">
+      <div class="selected-info">已选：<b id="selected-topic-name">—</b></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="switchTab('trends', document.querySelectorAll('.tab-btn')[0])">← 返回趋势</button>
+        <button class="btn btn-primary" onclick="goToScript()">进入脚本车间 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 3: 脚本车间 ===== -->
+  <div id="tab-script" class="section">
+    <div class="sw-layout">
+      <div class="sw-sidebar">
+        <div class="sw-card">
+          <div class="sw-card-title">当前选题</div>
+          <div id="script-topic" class="sw-topic empty">尚未选择，请先去「选题工厂」选一个</div>
+        </div>
+        <div class="sw-card">
+          <div class="sw-card-title">创作模式</div>
+          <div class="mode-btns">
+            <button class="mode-btn active" data-mode="original" onclick="setMode(this)">✦ 纯原创（放飞想象力）</button>
+            <button class="mode-btn" data-mode="ref" onclick="setMode(this)">📎 参考热点仿写</button>
+            <button class="mode-btn" data-mode="mix" onclick="setMode(this)">🔀 融合创作（参考+原创）</button>
+          </div>
+        </div>
+        <div class="sw-card" id="ref-panel" style="display:none;">
+          <div class="sw-card-title">参考热点</div>
+          <div id="ref-list" class="ref-list"></div>
+        </div>
+        <div class="sw-card">
+          <div class="sw-card-title">视频参数</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div>
+              <span style="font-size:11px;color:#888;">时长</span>
+              <select class="sw-duration-select" id="script-duration" style="width:100%;margin-top:3px;">
+                <option>15秒（2-3镜）</option><option selected>30-60秒（5-7镜）</option><option>1-3分钟（8-12镜）</option><option>3分钟+（15镜+）</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size:11px;color:#888;">风格</span>
+              <select class="sw-duration-select" id="script-style" style="width:100%;margin-top:3px;">
+                <option>快节奏卡点</option><option>治愈慢节奏</option><option>剧情向</option><option>干货教程</option><option>搞笑整活</option><option>情感共鸣</option>
+              </select>
+            </div>
+            <div>
+              <span style="font-size:11px;color:#888;">目标平台</span>
+              <select class="sw-duration-select" id="script-platform" style="width:100%;margin-top:3px;">
+                <option>抖音</option><option>小红书</option><option>YouTube</option><option>TikTok</option><option>Instagram</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <!-- 自定义创作输入 -->
+        <div class="sw-card" id="custom-topic-card">
+          <div class="sw-card-title">✏️ 自定义创作</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="text" id="custom-topic-input" placeholder="直接输入你的选题想法..." 
+              style="width:100%;padding:10px 12px;border:1px solid #e0dcd0;border-radius:8px;font-size:13px;background:#fff;"
+              oninput="onCustomTopicInput()">
+            <div id="custom-topic-hint" style="font-size:11px;color:#aaa;display:none;">已输入自定义选题，脚本将基于此生成</div>
+            <button class="btn-sm" onclick="useCustomTopic()" id="btn-use-custom" style="display:none;width:100%;background:var(--accent);color:#fff;font-weight:600;">✅ 使用此选题创作</button>
+          </div>
+        </div>
+        <!-- API 模型配置面板 -->
+        <div class="api-config-card" id="api-config-card">
+          <div class="api-config-header" onclick="document.getElementById('api-config-card').classList.toggle('expanded')">
+            <span>🤖 模型配置</span><span class="api-config-arrow">▶</span>
+          </div>
+          <div class="api-config-body">
+            <div class="api-field">
+              <div class="api-field-label">API 类型</div>
+              <select id="api-provider" onchange="onProviderChange()">
+                <option value="openai">OpenAI 兼容</option>
+                <option value="deepseek" selected>DeepSeek</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="custom">自定义端点</option>
+              </select>
+            </div>
+            <div class="api-field">
+              <div class="api-field-label">API Key</div>
+              <input type="password" id="api-key" placeholder="sk-..." onchange="saveApiConfig()">
+            </div>
+            <div class="api-field" id="api-endpoint-field" style="display:none;">
+              <div class="api-field-label">自定义端点 URL</div>
+              <input type="text" id="api-endpoint" placeholder="https://api.example.com/v1/chat/completions" onchange="saveApiConfig()">
+            </div>
+            <div class="api-field">
+              <div class="api-field-label">主模型</div>
+              <select id="api-model" onchange="saveApiConfig()">
+                <option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o-mini</option>
+                <option value="gpt-4.1">GPT-4.1</option><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                <option value="deepseek-chat" selected>DeepSeek V3</option><option value="deepseek-reasoner">DeepSeek R1</option>
+              </select>
+            </div>
+            <div class="api-modules">
+              <div class="api-module-title">各模块创意参数</div>
+              <div class="api-module-row">
+                <span class="api-module-label">🎣 钩子</span>
+                <select id="mod-temp-hook" onchange="saveApiConfig()">
+                  <option value="1.0">创意(1.0)</option><option value="1.2" selected>高创意(1.2)</option><option value="1.4">极创意(1.4)</option>
+                </select>
+              </div>
+              <div class="api-module-row">
+                <span class="api-module-label">🎬 分镜</span>
+                <select id="mod-temp-scene" onchange="saveApiConfig()">
+                  <option value="0.7">精准(0.7)</option><option value="0.9" selected>平衡(0.9)</option><option value="1.1">灵活(1.1)</option>
+                </select>
+              </div>
+              <div class="api-module-row">
+                <span class="api-module-label">✨ 润色</span>
+                <select id="mod-temp-polish" onchange="saveApiConfig()">
+                  <option value="0.5">保守(0.5)</option><option value="0.7" selected>标准(0.7)</option><option value="0.9">大胆(0.9)</option>
+                </select>
+              </div>
+              <div class="api-module-row">
+                <span class="api-module-label">📝 标题</span>
+                <select id="mod-temp-title" onchange="saveApiConfig()">
+                  <option value="0.8">标准(0.8)</option><option value="1.1" selected>创意(1.1)</option><option value="1.3">爆款(1.3)</option>
+                </select>
+              </div>
+            </div>
+            <div id="api-status" class="api-status empty">未配置 API Key</div>
+          </div>
+        </div>
+      </div>
+      <div class="sw-main">
+        <div class="sw-toolbar">
+          <span class="sw-toolbar-label">操作</span>
+          <button class="btn btn-accent" onclick="generateScript()">✦ 生成专业分镜脚本</button>
+          <button class="btn btn-purple" onclick="aiDeepGenerate()" id="btn-ai-deep" title="直接调用AI模型生成精细脚本，逐句台词+分镜+钩子分析+违禁词检查">🤖 AI深度创作</button>
+          <button class="btn-sm" onclick="regenSection('hook')">重生成开头</button>
+          <button class="btn-sm" onclick="regenSection('climax')">重生成高潮</button>
+          <button class="btn-sm" onclick="regenSection('end')">重生成结尾</button>
+          <button class="btn-sm" onclick="copyScript()" id="copy-btn" style="display:none;margin-left:auto;">📋 复制全部</button>
+        </div>
+        <div class="sw-content">
+          <div class="sw-content-header">
+            <span class="sw-content-title" id="script-title">分镜脚本</span>
+            <span style="font-size:12px;color:#888;" id="script-meta"></span>
+          </div>
+          <div id="script-output">
+            <div class="sw-placeholder">
+              <p style="font-size:28px;">🎬</p>
+              <p>选好选题和模式后，点击「生成专业分镜脚本」</p>
+              <p style="font-size:12px;color:#aaa;margin-top:8px;">专业分镜脚本 · 含景别/台词/运镜/情绪/音效</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA: 近7天真实热点趋势 (数据更新时间: 2026-06-18 13:30)
+//   来源: 抖音热搜榜 / SocialBee TikTok周报 / NewEngen INS周报 / YouTube趋势
+// ============================================================
+const TREND_DATA = [
+  // —— 舞蹈 (6/13~6/18 周) ——
+  { id:1, cat:'舞蹈', platform:'抖音', heat:96, likes:87.2, publishDate:'6月17日', title:'2018特效带着手势舞杀回来了', desc:'2018年热门特效+手势舞二合一回归，怀旧感拉满，新一代用户第一次体验，两代用户共振', reason:'怀旧+新奇双重驱动，「当年我也跳过」与「这是什么好玩的」同时存在评论区，裂变极强', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/2018%E7%89%B9%E6%95%88%E5%B8%A6%E7%9D%80%E6%89%8B%E5%8A%BF%E8%88%9E%E6%9D%80%E5%9B%9E%E6%9D%A5%E4%BA%86'}] },
+  { id:2, cat:'舞蹈', platform:'TikTok', heat:94, likes:92.5, publishDate:'6月17日', title:'Ariana Grande "Hate That I Made U Love Me" 编舞挑战', desc:'@jennifermika_原创编舞，86,000+视频参与且持续增长，穿搭展示+咖啡舞蹈+流畅转场', reason:'音频攀升期加入收益最大，编舞可学度够高但足够精致，穿搭展示在歌曲中间快速切换效果最好', links:[{label:'TikTok趋势',url:'https://www.tiktok.com/music/hate-that-i-made-u-love-me'}] },
+  { id:3, cat:'舞蹈', platform:'抖音', heat:89, likes:78.3, publishDate:'6月15日', title:'端午龙舟+手势舞融合挑战', desc:'端午各省龙舟大比拼现场配合手势舞卡点，传统文化x潮流舞蹈跨界融合', reason:'端午期间龙舟话题热度极高（770万热度），叠加手势舞降低参与门槛', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E7%AB%AF%E5%8D%88%E5%90%84%E7%9C%81%E9%BE%99%E8%88%9F%E5%A4%A7%E6%AF%94%E6%8B%BC'}] },
+
+  // —— 颜值 (6/13~6/18 周) ——
+  { id:4, cat:'颜值', platform:'抖音', heat:95, likes:85.6, publishDate:'6月17日', title:'端午把国风山水化在脸上', desc:'端午妆容赛道：山水画元素+国风美妆，766万热度，传统文化美学破圈', reason:'节日+美妆+国风三重叠加，视觉冲击力极强，适合垂直美妆+穿搭跨界', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E7%AB%AF%E5%8D%88%E6%8A%8A%E5%9B%BD%E9%A3%8E%E5%B1%B1%E6%B0%B4%E5%8C%96%E5%9C%A8%E8%84%B8%E4%B8%8A'}] },
+  { id:5, cat:'颜值', platform:'Instagram', heat:92, likes:91.0, publishDate:'6月14日', title:'Flash Filter Transformation 闪滤变身', desc:'Instagram最新AI Stories工具，一键闪光滤镜完成素颜→精致造型切换，品牌企业账号完全可用', reason:'无音频限制的品牌友好趋势，展示产品使用前后效果的最佳格式', links:[{label:'INS趋势',url:'https://www.instagram.com/explore/tags/flashfilter/'}] },
+  { id:6, cat:'颜值', platform:'小红书', heat:88, likes:72.4, publishDate:'6月16日', title:'「爬行拍照」城市夜景人像', desc:'俯拍角度+城市灯光为背景的拍照技巧，小红书摄影/穿搭交叉领域新趋势', reason:'拍摄技巧类内容在小红书收藏率极高，俯拍POV是2026年5大拍摄技巧之首', links:[{label:'小红书探索',url:'https://www.xiaohongshu.com/explore'}] },
+
+  // —— Vlog (6/13~6/18 周) ——
+  { id:7, cat:'Vlog', platform:'抖音', heat:97, likes:88.9, publishDate:'6月17日', title:'查寝阿姨变摇滚主唱', desc:'素人反差走红案例：查寝阿姨突然展现隐藏摇滚实力，1058万热度，全网寻找反差素人', reason:'「反差感」是2026年最核心爆款驱动力之一，普通人突然展现隐藏技能的反差视频完播率极高', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E6%9F%A5%E5%AF%9D%E9%98%BF%E5%A7%A8%E5%8F%98%E6%91%87%E6%BB%9A%E4%B8%BB%E5%94%B1'}] },
+  { id:8, cat:'Vlog', platform:'TikTok', heat:93, likes:95.2, publishDate:'6月16日', title:'"Oh Well, Whatever, Nevermind" 态度日常', desc:'Nirvana金句三字耸肩，单一镜头展示自己的「放空之地」，黑沙滩/健身房/船上/山中徒步', reason:'表演性漠不关心从未如此迷人——Kurt Cobain写了完美的三字耸肩，躺下/伸展/凝视远方就够了', links:[{label:'TikTok趋势',url:'https://www.tiktok.com/music/smells-like-teen-spirit'}] },
+  { id:9, cat:'Vlog', platform:'小红书', heat:86, likes:65.7, publishDate:'6月13日', title:'「一人居」周末深夜读书Vlog', desc:'一盏台灯+一本书+ASMR翻页声，无台词纯氛围，治愈系独居生活记录新顶流', reason:'小红书2026趋势：原始未经修饰的内容表现优于高制作帖子，真实感>精修感', links:[{label:'小红书探索',url:'https://www.xiaohongshu.com/explore'}] },
+
+  // —— 美食 (6/13~6/18 周) ——
+  { id:10, cat:'美食', platform:'抖音', heat:94, likes:82.1, publishDate:'6月17日', title:'吃上了心心念念的顺德鱼生', desc:'顺德鱼生从地方美食走向全国热搜，768万热度，「当地人才知道的地道吃法」系列走红', reason:'「地道美食」异地种草逻辑极强，观众看完就想飞过去吃，收藏率=未来消费意愿', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E9%A1%BA%E5%BE%B7%E9%B1%BC%E7%94%9F'}] },
+  { id:11, cat:'美食', platform:'TikTok', heat:91, likes:88.3, publishDate:'6月14日', title:'Food Jutsu 美食忍术召唤', desc:'《火影忍者》《咒术回战》的召唤手势 → CapCut模板转场 → 食物凭空出现，3690万视频参与', reason:'荒诞、特定、奖励所有看动漫长大的人，#FoodJutsu越搞笑或越意外的召唤物品评论区越好', links:[{label:'TikTok #FoodJutsu',url:'https://www.tiktok.com/tag/foodjutsu'}] },
+  { id:12, cat:'美食', platform:'抖音', heat:87, likes:71.8, publishDate:'6月15日', title:'晒出你的贵州冰浆', desc:'贵州冰浆从地方甜品到全国打卡话题，766万热度，「地方特色甜品挑战」系列持续发酵', reason:'夏季冰品+地域文化双重加持，旅游+美食交叉垂类天然高传播', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E8%B4%B5%E5%B7%9E%E5%86%B0%E6%B5%86'}] },
+
+  // —— 穿搭 (6/13~6/18 周) ——
+  { id:13, cat:'穿搭', platform:'TikTok', heat:93, likes:90.4, publishDate:'6月16日', title:'Rock Music Glitch 摇滚故障编辑', desc:'Charli XCX "Rock Music"音频+故障冻结帧效果，穿搭展示/新品发布/造型平铺，看起来比实际难做', reason:'5月7日发布音频持续走高，拍摄3-5秒前置→glitch处分割→stuck frame冻结关键帧，中级编辑但回报极高', links:[{label:'TikTok音频',url:'https://www.tiktok.com/music/rock-music'}] },
+  { id:14, cat:'穿搭', platform:'Instagram', heat:90, likes:84.7, publishDate:'6月14日', title:'Bad News for My Wallet 购物冲动系列', desc:'原创音频@aguwalkerduh，展示"又买了不该买的东西"的穿搭/购物内容，企业账号完全可用', reason:'企业账号友好+无授权限制，品牌可直接展示产品，「冲动消费」共鸣极强', links:[{label:'INS趋势',url:'https://www.instagram.com/reels/audio/'}] },
+  { id:15, cat:'穿搭', platform:'抖音', heat:85, likes:67.2, publishDate:'6月15日', title:'被哈兰德的红头绳种草了', desc:'世界杯期间哈兰德标志性红头绳意外成穿搭热点，768万热度，「运动明星同款穿搭」系持续发酵', reason:'大型赛事期间运动员穿搭天然热搜体质，世界杯周期+6周持续热度', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E5%93%88%E5%85%B0%E5%BE%B7%E7%BA%A2%E5%A4%B4%E7%BB%B3'}] },
+
+  // —— 科技 (6/13~6/18 周) ——
+  { id:16, cat:'科技', platform:'抖音', heat:91, likes:79.4, publishDate:'6月17日', title:'人开始扮演仿生机器人了', desc:'人类模仿机器人动作和行为方式，771万热度，科技+表演+搞笑三重叠加', reason:'AI时代x机器人话题天然抓眼球，「扮演仿生人」门槛低但创意空间极大', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E4%BA%BA%E5%BC%80%E5%A7%8B%E6%89%AE%E6%BC%94%E4%BB%BF%E7%94%9F%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%BA%86'}] },
+  { id:17, cat:'科技', platform:'YouTube', heat:89, likes:74.6, publishDate:'6月13日', title:'用AI生成短视频全流程实测（2026版）', desc:'2026年最新AI工具：从选题AI→脚本AI→视频生成AI，完整工作流对比实测', reason:'短视频创作者是最活跃的内容消费群体，AI工具教程持续高需求', links:[{label:'YouTube搜索',url:'https://www.youtube.com/results?search_query=AI+video+generation+2026+workflow'}] },
+  { id:18, cat:'科技', platform:'抖音', heat:86, likes:68.9, publishDate:'6月14日', title:'端午和周星驰拍上AI食神大片了', desc:'端午xAIx周星驰经典IP联动，771万热度，人人可参与的AI大片生成', reason:'节日+经典IP+AI技术三重融合，破圈潜力极大', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E7%AB%AF%E5%8D%88+%E5%91%A8%E6%98%9F%E9%A9%B0+AI%E9%A3%9F%E7%A5%9E'}] },
+
+  // —— 情感 (6/13~6/18 周) ——
+  { id:19, cat:'情感', platform:'抖音', heat:93, likes:83.5, publishDate:'6月16日', title:'新郎婚礼神回复家务提问', desc:'婚礼现场新郎被问家务问题，高情商幽默回复走红，767万热度', reason:'婚恋+两性话题是永恒的流量密码，幽默化解紧张感的回答天然适合传播', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E6%96%B0%E9%83%8E%E5%A9%9A%E7%A4%BC%E7%A5%9E%E5%9B%9E%E5%A4%8D%E5%AE%B6%E5%8A%A1'}] },
+  { id:20, cat:'情感', platform:'TikTok', heat:90, likes:86.2, publishDate:'6月17日', title:'"That\'s My Why" 三页情书轮播', desc:'三张幻灯片轮播：①介绍主题→②说出特别之处→③以"that\'s my why"收尾，情侣/宠物/美食/爱好均适用', reason:'极简三页格式+强情感钩子，情感版使用衬线字体效果最好，喜剧版可拍反应视频叠加', links:[{label:'TikTok趋势',url:'https://www.tiktok.com/tag/thatsmywhy'}] },
+  { id:21, cat:'情感', platform:'抖音', heat:87, likes:77.3, publishDate:'6月14日', title:'周挽陆西骁山顶吻顶级拉扯', desc:'短剧CP名场面出圈，771万热度，微短剧情感片段独立传播成短视频新趋势', reason:'微短剧片段独立剪辑+情感标签=超高传播效率，CP感是情感类最稳定流量', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E5%91%A8%E6%8C%BD%E9%99%86%E8%A5%BF%E9%AA%81'}] },
+
+  // —— 搞笑 (6/13~6/18 周) ——
+  { id:22, cat:'搞笑', platform:'TikTok', heat:96, likes:94.1, publishDate:'6月17日', title:'Wow, Ok 演技范围挑战', desc:'用支持型→失望型→讽刺型→调情型四种情绪演绎同一句"wow, ok"，最低门槛表演挑战', reason:'两个词+四种演绎+零剧本，评论区观众排名互动率极高，双人版效果翻倍', links:[{label:'TikTok趋势',url:'https://www.tiktok.com/tag/wowokchallenge'}] },
+  { id:23, cat:'搞笑', platform:'抖音', heat:92, likes:82.7, publishDate:'6月16日', title:'「周五我将全职研究这个端午」', desc:'端午节前最后一工作日自嘲梗，1159万热度，打工人集体共鸣', reason:'「周五摆烂」+「节日倒计时」双梗叠加，打工人自嘲是中文互联网最大公约数', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E5%91%A8%E4%BA%94%E6%88%91%E5%B0%86%E5%85%A8%E8%81%8C%E7%A0%94%E7%A9%B6%E8%BF%99%E4%B8%AA%E7%AB%AF%E5%8D%88'}] },
+  { id:24, cat:'搞笑', platform:'TikTok', heat:91, likes:87.9, publishDate:'6月17日', title:'"My mother didn\'t raise a quitter" 自嘲坚持', desc:'把"坏习惯"包装成"坚持不懈"——又买了一杯拿铁/又订了旅行/又熬夜，自嘲感拉满', reason:'品牌可完美植入：咖啡品牌展示"又买了一杯XX"，旅行公司展示"又在计划下一次度假"', links:[{label:'TikTok趋势',url:'https://www.tiktok.com/tag/mymotherdidntraiseaquitter'}] },
+  { id:25, cat:'搞笑', platform:'抖音', heat:88, likes:75.8, publishDate:'6月15日', title:'谁家萌宠这么摇头晃脑', desc:'宠物+音乐卡点搞笑向，769万热度，世界杯期间宠物「摇头晃脑看球」系列持续走红', reason:'萌宠是永恒的安全牌，叠加世界杯事件热度翻倍', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E8%B0%81%E5%AE%B6%E8%90%8C%E5%AE%A0%E8%BF%99%E4%B9%88%E6%91%87%E5%A4%B4%E6%99%83%E8%84%91'}] },
+
+  // —— 健身 (6/13~6/18 周) ——
+  { id:26, cat:'健身', platform:'抖音', heat:88, likes:76.5, publishDate:'6月17日', title:'测测不同体脂下的你', desc:'AI体脂滤镜挑战：输入当前体脂率，生成不同体脂下的身材效果，765万热度', reason:'「变身」类视觉内容天然高互动，AI体脂滤镜降低健身内容创作门槛', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E6%B5%8B%E6%B5%8B%E4%B8%8D%E5%90%8C%E4%BD%93%E8%84%82%E4%B8%8B%E7%9A%84%E4%BD%A0'}] },
+  { id:27, cat:'健身', platform:'TikTok', heat:85, likes:72.3, publishDate:'6月14日', title:'Summer Body 赛里木湖户外健身', desc:'赛里木湖等小众户外场景的健身打卡，「来不来都不白活」781万热度带动户外健身', reason:'户外+健身+旅行三重融合，自然光线美感远超健身房', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E8%B5%9B%E9%87%8C%E6%9C%A8%E6%B9%96'}] },
+
+  // —— 旅行 (6/13~6/18 周) ——
+  { id:28, cat:'旅行', platform:'抖音', heat:93, likes:84.3, publishDate:'6月17日', title:'晒出我的封神旅行落地签', desc:'端午旅行打卡话题：我的端午落地签，894万热度，全国旅游打卡热潮', reason:'节日出行+旅行打卡=最强社交货币，端午假期窗口最后一天持续发酵', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E6%99%92%E5%87%BA%E6%88%91%E7%9A%84%E5%B0%81%E7%A5%9E%E6%97%85%E8%A1%8C'}] },
+  { id:29, cat:'旅行', platform:'TikTok', heat:90, likes:85.7, publishDate:'6月16日', title:'The Puerto Rico Song 城市冒险', desc:'Saxboy Billy洗脑hook配合城市漫步——Soho/老圣胡安/市中心收益最高，穿搭/GRWM/一日生活均可', reason:'瞬间可识别+容易对嘴+文化特色鲜明，清晰对嘴唱hook让观众在脑海中跟唱', links:[{label:'TikTok音频',url:'https://www.tiktok.com/music/the-puerto-rico-song'}] },
+  { id:30, cat:'旅行', platform:'小红书', heat:87, likes:70.5, publishDate:'6月13日', title:'「端午避开人从众」小众目的地', desc:'端午期间「反向旅游」需求爆发，避开热门景点+发现本地宝藏地，小红书攻略类最高收藏', reason:'2026小红书趋势：搜索+推荐双引擎驱动，攻略类天然高搜索量+高收藏', links:[{label:'小红书探索',url:'https://www.xiaohongshu.com/explore'}] },
+
+  // —— 短剧/剧情 (6/13~6/18 周，新增垂类) ——
+  { id:31, cat:'短剧', platform:'抖音', heat:91, likes:81.2, publishDate:'6月16日', title:'短剧《小满人间》东北文学具象化', desc:'东北文学+微短剧跨界成功案例，910万热度，「地方文学+短剧」新赛道崛起', reason:'微短剧+地域文化绑定，既有短剧的「追更」粘性又有地域文化的辨识度', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E5%B0%8F%E6%BB%A1%E4%BA%BA%E9%97%B4%E4%B8%9C%E5%8C%97%E6%96%87%E5%AD%A6'}] },
+  { id:32, cat:'短剧', platform:'抖音', heat:88, likes:76.9, publishDate:'6月17日', title:'云深不知梦特别篇开播', desc:'古风微短剧特别篇，766万热度，IP化短剧系列化运营成主流', reason:'短剧「系列化+特别篇」创造持续性热度，固定更新日培养观众习惯', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E4%BA%91%E6%B7%B1%E4%B8%8D%E7%9F%A5%E6%A2%A6%E7%89%B9%E5%88%AB%E7%AF%87'}] },
+
+  // —— 世界杯/体育 (6/11~6/18，世界杯开赛首周) ——
+  { id:33, cat:'体育', platform:'抖音', heat:95, likes:89.4, publishDate:'6月17日', title:'世界杯刷屏：梅西/哈兰德/C罗全热搜', desc:'FIFA世界杯6月11日开赛，英格兰4:2克罗地亚、阿根廷3:0、C罗首发争议等多话题霸屏', reason:'世界杯是全球最大流量池，6周持续热度，任何垂类都可蹭世界杯话题', links:[{label:'抖音热搜',url:'https://www.douyin.com/search/%E4%B8%96%E7%95%8C%E6%9D%AF'}] },
+  { id:34, cat:'体育', platform:'YouTube', heat:92, likes:93.6, publishDate:'6月15日', title:'世界杯精彩集锦+赛后分析', desc:'YouTube世界杯官方集锦和各路足球分析频道爆发式增长，赛后战术分析/球员点评需求极大', reason:'世界杯=全球YouTube流量爆发期，赛事+分析+周边内容全面开花', links:[{label:'YouTube搜索',url:'https://www.youtube.com/results?search_query=world+cup+2026+highlights'}] },
+  { id:35, cat:'体育', platform:'TikTok', heat:89, likes:86.8, publishDate:'6月14日', title:'世界杯球迷区创意内容', desc:'TikTok #WorldCup2026 标签爆发，球迷反应视频/观赛穿搭/应援舞蹈/赛果预测6种格式最火', reason:'球迷区内容=情感共鸣+实时话题+社区互动，六周内持续可做', links:[{label:'TikTok #WorldCup2026',url:'https://www.tiktok.com/tag/worldcup2026'}] },
+];
+
+let activeCat = '全部', activePlatform = '全部', activeSort = 'heat';
+let selectedTopic = null, generatedTopics = [];
+let currentMode = 'original', selectedRefIdx = -1;
+
+// ============================================================
+//  🔬 拆解分析驱动模式 (Analyzer-Driven Generation)
+// ============================================================
+let analysisContext = null;
+
+function tryLoadAnalysis() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#analysis=')) {
+    try {
+      const encoded = hash.slice('#analysis='.length);
+      const json = decodeURIComponent(atob(encoded));
+      analysisContext = JSON.parse(json);
+      console.log('🔬 拆解分析数据已加载:', analysisContext.viral_style);
+      showAnalysisBanner();
+    } catch(e) {
+      console.log('分析数据解析失败:', e);
+    }
+  }
+}
+
+function showAnalysisBanner() {
+  if (!analysisContext) return;
+  const ctx = analysisContext;
+  const banner = document.createElement('div');
+  banner.id = 'analysis-banner';
+  banner.innerHTML = `<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 20px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:1.2rem">🔬</span><div style="flex:1;min-width:200px"><strong>拆解驱动模式</strong><span style="opacity:0.85;font-size:0.85rem;margin-left:8px">${ctx.viral_style||'未知风格'} · ${ctx.overall_score||0}分 · ${ctx.content_formula?.formula_name||'待分析'}</span></div><button onclick="clearAnalysis()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ 退出</button></div>`;
+  document.querySelector('.container').insertBefore(banner, document.querySelector('.container').firstChild);
+  // Auto-fill topic inputs from analysis
+  const catSel = document.getElementById('topic-cat');
+  const ideaInput = document.getElementById('topic-idea');
+  const styleMap = {'情绪共鸣型':'情感','知识干货型':'科技','剧情反转型':'剧情','视觉冲击型':'视觉','幽默搞笑型':'搞笑'};
+  const cat = styleMap[ctx.viral_style] || '融合垂类';
+  if (catSel) catSel.value = cat;
+  if (ctx.content_formula?.formula_template && ideaInput) ideaInput.value = ctx.content_formula.formula_template;
+}
+
+function clearAnalysis() {
+  analysisContext = null;
+  window.location.hash = '';
+  const banner = document.getElementById('analysis-banner');
+  if (banner) banner.remove();
+}
+
+function getAnalysisPrompt() {
+  if (!analysisContext) return '';
+  const ctx = analysisContext;
+  let p = '\n【参考拆解数据 - 请模仿此爆款风格创作】\n';
+  p += '爆款风格: '+ctx.viral_style+'\n';
+  if (ctx.content_formula?.formula_template) p += '内容公式模板: '+ctx.content_formula.formula_template+'\n';
+  if (ctx.content_formula?.core_elements) p += '核心要素: '+ctx.content_formula.core_elements.join('、')+'\n';
+  if (ctx.script_structure?.structure_type) p += '脚本结构类型: '+ctx.script_structure.structure_type+'\n';
+  if (ctx.opening_hook?.hook_type) p += '钩子类型: '+ctx.opening_hook.hook_type+'\n';
+  if (ctx.emotional_curve?.curve_description) p += '情绪曲线: '+ctx.emotional_curve.curve_description+'\n';
+  if (ctx.summary) p += '参考总结: '+ctx.summary.substring(0,500)+'\n';
+  p += '\n请模仿以上风格的节奏、结构和情绪设计，生成全新的选题和脚本。保持相同的内容DNA但更换主题。';
+  return p;
+}
+
+tryLoadAnalysis();
+
+// ============================================================
+//  TAB SWITCH
+// ============================================================
+function switchTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'trends') renderTrends();
+}
+
+// ============================================================
+//  TRENDS: 过滤 + 渲染
+// ============================================================
+function filterCat(el, cat) {
+  document.querySelectorAll('.filter-row .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeCat = cat;
+  renderTrends();
+}
+function filterPf(el, pf) {
+  document.querySelectorAll('.pf').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activePlatform = pf;
+  renderTrends();
+}
+
+function setSort(type, el) {
+  document.querySelectorAll('.sort-row .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeSort = type;
+  renderTrends();
+}
+
+// 解析 publishDate 用于排序
+function parseDate(d) {
+  const m = { '6月':6, '7月':7, '5月':5 };
+  const match = d.match(/(\d+)月(\d+)日/);
+  if (match) return new Date(2026, parseInt(match[1])-1, parseInt(match[2]));
+  return new Date(2026, 5, 10); // fallback to old
+}
+
+function renderTrends() {
+  const grid = document.getElementById('trends-grid');
+  let filtered = TREND_DATA.filter(t =>
+    (activeCat === '全部' || t.cat === activeCat) &&
+    (activePlatform === '全部' || t.platform === activePlatform)
+  );
+  // 按选择的排序方式排序
+  if (activeSort === 'heat') {
+    filtered.sort((a, b) => b.heat - a.heat);
+  } else if (activeSort === 'likes') {
+    filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  } else if (activeSort === 'date') {
+    filtered.sort((a, b) => parseDate(b.publishDate || '6月10日') - parseDate(a.publishDate || '6月10日'));
+  }
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">该条件下暂无热点</div><div class="empty-desc">换个垂类或平台试试</div></div>';
+    return;
+  }
+  grid.innerHTML = filtered.map((t, i) => `
+    <div class="trend-card" id="tcard-${t.id}" onclick="selectTrend(${t.id})">
+      <div class="card-rank ${i < 3 ? 'hot' : ''}">${i + 1}</div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags">
+            <span class="ctag ctag-cat">${t.cat}</span>
+            <span class="ctag ctag-pf" style="background:${getPfColor(t.platform)};">${t.platform}</span>
+            <span class="ctag" style="background:#e8f5e9;color:#2e7d32;font-size:10px;">${t.publishDate}</span>
+          </div>
+          <div class="heat-bar">
+            <span class="heat-val">${t.heat}°</span>
+            <span class="heat-icon">${t.heat >= 95 ? '🔥🔥🔥' : t.heat >= 90 ? '🔥🔥' : '🔥'}</span>
+            <span style="font-size:10px;color:#888;margin-left:4px;">👍${t.likes}万</span>
+          </div>
+        </div>
+        <div class="card-title">${t.title}</div>
+        <div class="card-desc">${t.desc}</div>
+        <div class="card-reason">💡 ${t.reason}</div>
+        ${t.links.length ? `<div class="card-links">${t.links.map(l => `<a class="card-link" href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('')}</div>` : ''}
+        <div class="card-actions">
+          <button class="cbtn accent" onclick="event.stopPropagation();useTrend(${t.id})">用此热点生成选题 →</button>
+          <button class="cbtn" onclick="event.stopPropagation();refScript(${t.id})">参考写脚本</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getPfColor(pf) {
+  return { '抖音':'#000','小红书':'#E24B4A','YouTube':'#FF0000','TikTok':'#010101','Instagram':'#C13584' }[pf] || '#888';
+}
+
+function selectTrend(id) {
+  document.querySelectorAll('.trend-card').forEach(c => c.classList.remove('selected'));
+  const el = document.getElementById('tcard-' + id);
+  if (el) el.classList.add('selected');
+}
+
+function useTrend(id) {
+  const t = TREND_DATA.find(x => x.id === id);
+  if (!t) return;
+  // 跳转到选题工厂，并预填垂类
+  document.getElementById('topic-cat').value = t.cat;
+  switchTab('topics', document.querySelectorAll('.tab-btn')[1]);
+  setTimeout(() => generateTopics(), 100);
+}
+
+function refScript(id) {
+  const t = TREND_DATA.find(x => x.id === id);
+  if (!t) return;
+  // 设置脚本车间的参考热点
+  const topicEl = document.getElementById('script-topic');
+  topicEl.textContent = '参考热点：「' + t.title + '」';
+  topicEl.classList.remove('empty');
+  // 切换到仿写模式
+  const refBtn = document.querySelector('[data-mode="ref"]');
+  if (refBtn) setMode(refBtn);
+  buildRefList();
+  switchTab('script', document.querySelectorAll('.tab-btn')[2]);
+}
+
+// ============================================================
+//  FETCH TRENDS (AI搜索入口)
+// ============================================================
+function fetchTrends(btn) {
+  btn.classList.add('syncing');
+  btn.innerHTML = '<span class="loading-dot" style="background:#888;animation:load 1.2s infinite;width:6px;height:6px;border-radius:50%;display:inline-block;"></span> 搜索中...';
+  setTimeout(() => {
+    renderTrends();
+    btn.classList.remove('syncing');
+    btn.innerHTML = '<span>✅</span> 已同步';
+    setTimeout(() => { btn.innerHTML = '<span>🔄</span> 同步热点'; }, 2000);
+  }, 1500);
+}
+
+// ============================================================
+//  TOPIC FACTORY: 生成选题
+// ============================================================
+function generateTopics() {
+  const cat = document.getElementById('topic-cat').value;
+  const platform = document.getElementById('topic-platform').value;
+  const duration = document.getElementById('topic-duration').value;
+  const idea = document.getElementById('topic-idea').value.trim();
+
+  const container = document.getElementById('topics-container');
+  container.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+
+  setTimeout(() => {
+    const topics = buildTopics(cat, platform, duration, idea);
+    generatedTopics = topics;
+    renderTopicCards(topics, platform, duration);
+  }, 800);
+}
+
+function refreshTopics() {
+  generateTopics();
+}
+
+let shownTopicTitles = new Set();  // 追踪已显示的选题标题，避免换一批重复
+// 额外追踪：每次 generateTopics 调用的去重上下文
+let lastGenerationContext = '';
+
+function buildTopics(cat, platform, duration, idea) {
+  // 构建当前生成上下文键（用于检测是否需要重置去重）
+  const contextKey = `${cat}|${platform}|${duration}|${idea}`;
+  if (contextKey !== lastGenerationContext) {
+    shownTopicTitles.clear();
+    lastGenerationContext = contextKey;
+  }
+  
+  // 如果用户输入了自定义想法 → 新实体感知引擎
+  if (idea) {
+    try {
+      const topics = buildCustomTopics(idea, cat, platform, duration, shownTopicTitles);
+      // Track for dedup
+      topics.forEach(t => shownTopicTitles.add(t.title));
+      return topics;
+    } catch(e) {
+      console.error('buildCustomTopics error:', e.message);
+      // 降级：使用垂类模板 + AI路由
+      return [{
+        title: `「${idea}」深度选题分析`,
+        cat: cat,
+        reason: `模板解析出错(${e.message})，点击下方按钮让 AI 深度分析你的想法`,
+        tags: ['AI深度创作', cat],
+        titles: [],
+        outline: ['🤖 模板解析遇到问题，请点击下方按钮发送给 AI 处理'],
+        shootDir: ['告诉我去做：搜索各平台热点 + 分析你的想法 + 生成5个选题'],
+        isAiRoute: true,
+      }];
+    }
+  }
+  // 否则使用垂类模板，真正随机抽取，排除已显示的
+  const allTemplates = TOPIC_DB[cat] || TOPIC_DB['融合垂类'];
+  const available = allTemplates.filter(t => !shownTopicTitles.has(t.title));
+  // 如果可用的不够5个，重置追踪并全量使用
+  const pool = available.length >= 5 ? available : (shownTopicTitles.clear(), allTemplates);
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 6).map((t, i) => {
+    shownTopicTitles.add(t.title);
+    return {
+      ...t,
+      titles: t.titles || generateTitles(t.title, cat, platform),
+      outline: t.outline || generateOutline(t.title, cat, platform),
+      shootDir: t.shootDir || generateShootDir(cat, platform),
+    };
+  });
+}
+
+// ============================================================
+//  ENTITY KNOWLEDGE BASE: 热门人物/团体/品牌等实体的具体信息
+// ============================================================
+const ENTITY_KB = {
+  'NCT': { type:'kpop', desc:'SM旗下韩国男子组合，含NCT127/NCTDREAM/WayV等子团，成员有Mark、在玹、渽民等', angles:['编舞','同款穿搭','仿妆','粉丝日常','练舞挑战','新歌reaction'] },
+  'SEVENTEEN': { type:'kpop', desc:'Pledis旗下13人男团，以自制内容和刀群舞著称，成员中 Vernon、The8等在中国有大量粉丝', angles:['刀群舞挑战','自给自足偶像概念','13人团魂','夫硕顺搞笑片段','小分队编舞'] },
+  'BTS': { type:'kpop', desc:'防弹少年团，全球最大男团，成员包括RM、Jin、SUGA、J-Hope、Jimin、V、Jungkook', angles:['兵役期回忆','solo作品reaction','经典舞台重温','ARMY日常','学跳防弹舞'] },
+  'BLACKPINK': { type:'kpop', desc:'YG旗下女团，成员Lisa、Jennie、Jisoo、Rosé，全球现象级女团', angles:['BLACKPINK同款穿搭','Lisa舞蹈翻跳','Jennie仿妆','团综名场面','科切拉经典舞台'] },
+  'EXO': { type:'kpop', desc:'SM旗下男团，成员伯贤、灿烈、D.O.、Kai、世勋等，三代团标杆', angles:['经典歌曲reaction','舞蹈翻跳','EXO回归回忆','成员solo作品','爱丽粉丝日常'] },
+  'AESPA': { type:'kpop', desc:'SM旗下女团，元宇宙概念女团，成员Karina、Winter、Giselle、Ningning', angles:['AI概念解析','舞蹈翻跳','ae成员趣味对比','高音killing part挑战'] },
+  'IVE': { type:'kpop', desc:'Starship旗下女团，成员安宥真、张员瑛等，多首爆曲', angles:['舞蹈翻跳','安宥真张员瑛双塔魅力','LOVE DIVE/After LIKE等爆曲reaction','IVE式表情管理教学'] },
+  'NEWJEANS': { type:'kpop', desc:'HYBE旗下女团，Y2K复古概念，成员Minji、Hanni、Danielle、Haerin、Hyein', angles:['Y2K穿搭','NewJeans式编舞挑战','青春校园概念解析','音源口碑分析'] },
+  'STRAYKIDS': { type:'kpop', desc:'JYP旗下男团，以自作曲和强烈舞台著称，成员方灿、Lee Know、彰彬、铉辰、HAN、Felix、昇玟、I.N', angles:['编舞翻跳','自作曲拆解','Felix低音炮','铉辰直拍','3RACHA制作能力'] },
+  '薛之谦': { type:'artist_cn', desc:'中国歌手/音乐制作人，演唱会热度极高，《演员》《丑八怪》等代表作', angles:['演唱会Vlog','翻唱挑战','歌词解读','薛之谦式深情','冷门好歌推荐'] },
+  '周杰伦': { type:'artist_cn', desc:'华语乐坛天王，代表作无数，持续巡演中', angles:['演唱会打卡','周杰伦歌词挑战','老歌reaction','Jay式中国风','00后听周杰伦'] },
+  '刘亦菲': { type:'actor_cn', desc:'演员，《去有风的地方》《梦华录》等作品，神仙姐姐形象深入人心', angles:['神仙姐姐穿搭','赵盼儿仿妆','去有风的地方打卡','古装造型盘点'] },
+};
+// 实体名别名映射（用户可能用各种写法）
+const ENTITY_ALIASES = {
+  'nct': 'NCT', 'nct127': 'NCT', 'nct dream': 'NCT', 'wayv': 'NCT', 'nctzen': 'NCT',
+  'seventeen': 'SEVENTEEN', 'svt': 'SEVENTEEN', '세븐틴': 'SEVENTEEN',
+  'bts': 'BTS', '방탄소년단': 'BTS', '防弹少年团': 'BTS', '防弹': 'BTS',
+  'blackpink': 'BLACKPINK', 'bp': 'BLACKPINK', '블랙핑크': 'BLACKPINK',
+  'exo': 'EXO', '엑소': 'EXO',
+  'aespa': 'AESPA', '에스파': 'AESPA',
+  'ive': 'IVE', '아이브': 'IVE',
+  'newjeans': 'NEWJEANS', 'new jeans': 'NEWJEANS', '뉴진스': 'NEWJEANS',
+  'stray kids': 'STRAYKIDS', 'skz': 'STRAYKIDS', '스트레이키즈': 'STRAYKIDS',
+  'xuezhiqian': '薛之谦', '老薛': '薛之谦',
+  'jay chou': '周杰伦', 'jay': '周杰伦', '杰伦': '周杰伦', '周董': '周杰伦',
+  'liuyifei': '刘亦菲', '亦菲': '刘亦菲',
+};
+
+function extractEntities(idea) {
+  const entities = [];
+  const lowerIdea = idea.toLowerCase();
+  // 先检查别名映射
+  for (const [alias, canonical] of Object.entries(ENTITY_ALIASES)) {
+    if (lowerIdea.includes(alias.toLowerCase()) && !entities.find(e => e.canonical === canonical)) {
+      entities.push({ canonical, ...ENTITY_KB[canonical] });
+    }
+  }
+  // 直接匹配知识库
+  for (const [name, info] of Object.entries(ENTITY_KB)) {
+    if (lowerIdea.includes(name.toLowerCase()) && !entities.find(e => e.canonical === name)) {
+      entities.push({ canonical: name, ...info });
+    }
+  }
+  return entities;
+}
+
+// 分析用户输入，提取核心关键词、实体、意图
+function parseUserIdea(idea) {
+  let core = idea.replace(/和|与|跟|加上|结合|融合|混合|组合/g, '').trim();
+  if (!core || core.length < 1) core = idea;
+  
+  // 提取具体实体
+  const entities = extractEntities(idea);
+  
+  // 提取泛化意图类型
+  const types = [];
+  if (/追星|明星|爱豆|偶像|演唱会|应援|饭圈|本命|kpop|k-pop/i.test(idea)) types.push('追星');
+  if (/宠物|猫|狗|萌宠|主子|喵|汪/i.test(idea)) types.push('宠物');
+  if (/职场|上班|打工人|加班|辞职|跳槽|同事/i.test(idea)) types.push('职场');
+  if (/学生|大学|高中|考试|学习|考研|宿舍/i.test(idea)) types.push('学生');
+  if (/恋爱|失恋|单身|相亲|情侣|暧昧/i.test(idea)) types.push('恋爱');
+  if (/父母|妈妈|爸爸|奶奶|爷爷|家庭|亲戚/i.test(idea)) types.push('家庭');
+  if (/钱|省钱|赚钱|穷|理财|预算|工资/i.test(idea)) types.push('理财');
+  if (/古风|汉服|二次元|cos|动漫|游戏/i.test(idea)) types.push('二次元');
+  if (/节日|过年|春节|圣诞|跨年|生日/i.test(idea)) types.push('节日');
+  if (/变美|护肤|化妆|发型|医美/i.test(idea)) types.push('变美');
+  
+  // confidence: 有具体实体 → high，有意图类型 → medium，都无 → low
+  let confidence = entities.length > 0 ? 'high' : types.length > 0 ? 'medium' : 'low';
+  
+  return { core, types, entities, raw: idea, matchCount: types.length + entities.length, confidence };
+}
+
+// ============================================================
+//  PLATFORM-SPECIFIC ANGLE FRAMING（不同平台选题角度完全不同）
+// ============================================================
+const PLATFORM_ANGLE = {
+  '抖音': { framing: ['挑战','反转','快节奏','情绪爆发','参与互动','话题制造'], titlePrefix: ['你敢信','没想到','居然','我用了X天','看完我沉默了'], shootStyle: '竖屏9:16，快节奏卡点剪辑，前3秒强钩子，多用热梗/音效，字幕大字醒目' },
+  '小红书': { framing: ['教程干货','种草分享','情绪共鸣','审美提升','生活记录','真实测评'], titlePrefix: ['新手必看','保姆级','说点真心话','用了X年的','我的私藏','收藏！'], shootStyle: '竖屏/横屏均可，封面图精致（标题大字+干净底图），节奏可慢，强调真实感和氛围感' },
+  'TikTok': { framing: ['trend challenge','reaction','POV','transformation','storytime','satisfying'], titlePrefix: ['I tried','POV:','Watch this','No one talks about','The truth about','How to'], shootStyle: '竖屏9:16，节奏快，多用热门音频/sound，前2秒hook极强，text overlay英文大字' },
+  'Instagram': { framing: ['aesthetic','visual storytelling','before/after','flatlay','mood','OOTD/GRWM'], titlePrefix: ['the art of','a love letter to','currently obsessed with','behind the scenes of'], shootStyle: '竖屏/正方形均可，重视觉质感，色彩统一，reels前3秒快速catch，carousel适合教程/对比' },
+  'YouTube': { framing: ['深度解析','全流程实测','对比评测','纪录片式','知识干货','系列连载'], titlePrefix: ['我用了X天后发现','终极指南：','深度拆解','一次讲清楚','完整记录：','真相是'], shootStyle: '横屏16:9，信息密度高，章节分明，可加章节标记/chapter，鼓励订阅+小铃铛' },
+};
+function getPlatformFraming(pf) { return PLATFORM_ANGLE[pf] || PLATFORM_ANGLE['抖音']; }
+
+// ============================================================
+//  实体驱动选题生成：利用实体知识库+平台特性生成真正差异化的选题
+// ============================================================
+function buildCustomTopics(idea, cat, platform, duration, shownTitles) {
+  const parsed = parseUserIdea(idea);
+  const pf = getPlatformFraming(platform);
+  const topics = [];
+  const usedTitles = new Set(shownTitles || []); // 预加载已显示的标题，确保不重复
+
+  // ─── HIGH CONFIDENCE: 识别到具体实体 → 生成实体专属选题 ───
+  if (parsed.confidence === 'high' && parsed.entities.length > 0) {
+    const entity = parsed.entities[0];
+    const entityTopicGen = {
+      '抖音': (e) => [
+        {title:`挑战${e.canonical}同款编舞：第7天终于不翻车了`, reason:`${e.desc}——跟练挑战+成长弧线，抖音最热挑战格式`, tags:['挑战','成长',e.type]},
+        {title:`普通人翻跳${e.canonical}：找路人打分实录`, reason:`${e.canonical}粉丝基数大+路人真实反应=天然爆款`, tags:['街拍','互动','真实',e.type]},
+        {title:`去${e.canonical}演唱会现场的24小时全记录`, reason:`${e.type}演唱会Vlog长期流量密码，粉丝搜索+路人好奇`, tags:['Vlog','现场',e.type]},
+        {title:`不按快退键看${e.canonical}这支舞：逐秒拆解`, reason:`逐帧分析是${e.type}粉丝深度内容，收藏率极高`, tags:['解析','干货',e.type]},
+        {title:`把${e.canonical}歌词写成我的故事：第几句你破防了`, reason:`歌词+情感共鸣，${e.type}粉丝天然共鸣+路人转粉`, tags:['情感','歌词','共鸣',e.type]},
+        {title:`当咖啡店员让我唱${e.canonical}的歌：社死现场`, reason:`公共场合K-POP梗+社死=天然爆款喜剧内容`, tags:['社死','搞笑',e.type]},
+        {title:`用${e.canonical}的歌当闹钟一个月后我变了`, reason:`生活实验+${e.type}元素=新颖内容格式`, tags:['实验','生活',e.type]},
+        {title:`和闺蜜在商场突然跳${e.canonical}：路人反应绝了`, reason:`公共场所随机舞蹈挑战，是抖音${e.type}长期热门格式`, tags:['随机舞蹈','社交',e.type]},
+        {title:`我妈第一次看${e.canonical}MV的reaction`, reason:`代际碰撞+${e.type}=破圈传播利器`, tags:['reaction','家庭',e.type]},
+        {title:`${e.canonical}三年前的舞蹈 vs 现在：变化有多大`, reason:`进化对比，资深粉丝必看+路人猎奇`, tags:['对比','进化',e.type]},
+        {title:`翻跳${e.canonical}最容易翻车的三个动作——我全翻了`, reason:`翻车合集=搞笑+共鸣，${e.type}粉丝天然喜爱`, tags:['翻车','教程',e.type]},
+        {title:`用${e.canonical}的旋律写一首中文填词：全网首发`, reason:`中文填词=原创内容，${e.type}粉丝圈高传播`, tags:['填词','原创',e.type]},
+      ],
+      '小红书': (e) => [
+        {title:`${e.canonical}同款妆容保姆级教程：出门也不夸张`, reason:`${e.desc}——仿妆教程是小红书${e.type}最热品类，收藏率极高`, tags:['仿妆','教程','日常',e.type]},
+        {title:`拆解${e.canonical}穿搭逻辑：普通人能复刻的3套`, reason:`${e.type}穿搭日常化，小红书最受欢迎的穿搭内容`, tags:['穿搭','解析','实用',e.type]},
+        {title:`追${e.canonical}这些年：5个关于「热爱」的道理`, reason:`深度情感笔记风格，${e.type}粉丝共鸣+路人共情`, tags:['情感','成长','深度',e.type]},
+        {title:`一个人看${e.canonical}演唱会：从出发到散场的治愈Vlog`, reason:`独旅+追星双主题，独居女性共鸣极强`, tags:['独旅','Vlog','治愈',e.type]},
+        {title:`${e.canonical}冷门好歌：为什么这些歌没火我不理解`, reason:`信息差安利=小红书最强种草，长期搜索流量`, tags:['安利','冷门','种草',e.type]},
+        {title:`我的${e.canonical}手账：用3年时间记录每一次心动`, reason:`手账+n年记录=小红书追星美学，视觉冲击+情感共鸣`, tags:['手账','记录',e.type]},
+        {title:`${e.canonical}专属早餐：给本命做一顿能量早餐`, reason:`美食+追星跨界内容，极致的粉丝仪式感`, tags:['美食','DIY',e.type]},
+        {title:`我喜欢${e.canonical}的理由：从路人到铁粉的1300天`, reason:`入坑故事=最好安利，长文笔记格式天然适合`, tags:['故事','入坑',e.type]},
+        {title:`${e.canonical}最值得买的5件官方周边：选品思路分享`, reason:`周边购物指南=实用种草内容，评论区互动极高`, tags:['购物','测评',e.type]},
+        {title:`当你把${e.canonical}的MV画面还原成穿搭`, reason:`创意穿搭挑战，视觉冲击+${e.type}文化融入`, tags:['穿搭','创意',e.type]},
+        {title:`${e.canonical}歌词手写：每一句都是青春`, reason:`手写歌词=极度治愈，${e.type}粉丝情感寄托`, tags:['手写','治愈',e.type]},
+        {title:`用${e.canonical}的一句歌词描述初恋`, reason:`歌词+情感故事=小红书最强共情密码`, tags:['情感','歌词',e.type]},
+      ],
+      'YouTube': (e) => [
+        {title:`DEEP DIVE: ${e.canonical}为什么能全球圈粉——全维度拆解`, reason:`深度分析是YouTube${e.type}最强长尾内容`, tags:['深度分析','文化',e.type]},
+        {title:`我一个路人看${e.canonical}后彻底入坑的经历`, reason:`路人→粉丝的转化故事=最强安利，搜索流量巨大`, tags:['reaction','入坑','真诚',e.type]},
+        {title:`${e.canonical}最被低估的5首歌：数据vs艺术价值终极对比`, reason:`数据分析+主观评价结合，YouTube${e.type}蓝海内容`, tags:['数据','排名','争议',e.type]},
+        {title:`我扒了${e.canonical}100套舞台造型：最值得借鉴的10个细节`, reason:`视觉型长内容，三类受众同时覆盖`, tags:['造型','回顾','美学',e.type]},
+        {title:`${e.canonical}粉丝全球段位测试：你能答对几题？`, reason:`互动型内容，评论区和分享率极高`, tags:['测试','互动','粉丝',e.type]},
+        {title:`从头开始学跳${e.canonical}的舞：30天挑战日记`, reason:`纪录片式挑战，YouTube${e.type}内容爆款公式`, tags:['挑战','日记',e.type]},
+        {title:`${e.canonical}历张专辑全排名（纯主观）`, reason:`排名类内容天然引发讨论，评论区爆满`, tags:['排名','主观',e.type]},
+        {title:`如果只能推荐${e.canonical}一首歌给完全没听过的人`, reason:`单曲推荐+走心独白=长尾搜索和分享利器`, tags:['推荐','入门',e.type]},
+        {title:`${e.canonical}从练习生到顶流的完整时间线`, reason:`年表形式深度内容，${e.type}粉丝科普收藏必备`, tags:['历史','科普',e.type]},
+        {title:`把${e.canonical}风格融入日常审美：我改造了一个房间`, reason:`生活美学+${e.type}=全新跨界内容`, tags:['生活','装饰',e.type]},
+        {title:`${e.canonical}的音乐制作到底厉害在哪里：编曲工程拆解`, reason:`音乐专业角度分析=YouTube${e.type}硬核内容`, tags:['音乐','专业',e.type]},
+        {title:`全世界${e.canonical}粉丝写的信：我收集了1000条留言`, reason:`全球粉丝互动，情感密度极高的人情味内容`, tags:['全球','互动',e.type]},
+      ],
+    };
+    const gen = entityTopicGen[platform] || entityTopicGen['抖音'];
+    let entityTopics = gen(entity);
+    // 优先从未显示过的选题中选
+    const fresh = entityTopics.filter(t => !usedTitles.has(t.title));
+    const pool = fresh.length >= 5 ? fresh : [...fresh, ...entityTopics.filter(t => usedTitles.has(t.title))].slice(0, 12);
+    // 打乱并取前5
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    // 如果用户选了特定垂类，按垂类相关性得分排序
+    if (cat !== '全部' && cat !== '融合垂类') {
+      const catKW = { '舞蹈':['编舞','跳','舞','翻跳'], '颜值':['妆','美','造型'], '穿搭':['穿搭','造型','穿'], '情感':['故事','道理','共鸣','情感'], 'Vlog':['记录','Vlog','日常'] };
+      const keywords = catKW[cat] || [];
+      shuffled.sort((x, y) => {
+        const xHits = keywords.filter(k => (x.title + x.reason).includes(k)).length;
+        const yHits = keywords.filter(k => (y.title + y.reason).includes(k)).length;
+        return yHits - xHits;
+      });
+    }
+    shuffled.forEach(t => {
+      if (topics.length >= 5 || usedTitles.has(t.title)) return;
+      usedTitles.add(t.title);
+      topics.push({ ...t, entity: entity.canonical, outline: generateOutline(t.title, cat, platform), shootDir: [pf.shootStyle, `结合${entity.canonical}的${entity.angles?.slice(0,2).join('+') || '文化'}切入`] });
+    });
+    // 不够5个从TOPIC_DB补充
+    if (topics.length < 5) {
+      for (const c of [cat, '融合垂类', ...Object.keys(TOPIC_DB)]) {
+        if (!TOPIC_DB[c]) continue;
+        for (const t of TOPIC_DB[c]) {
+          if (topics.length >= 5) break;
+          const et = `${entity.canonical} × ${t.title}`;
+          if (usedTitles.has(et)) continue; usedTitles.add(et);
+          topics.push({ ...t, title: et, entity: entity.canonical, outline: generateOutline(et, cat, platform), shootDir: [pf.shootStyle, `结合${entity.canonical}元素进行${c}垂类创作`] });
+        }
+      }
+    }
+  }
+  // ─── MEDIUM CONFIDENCE: 泛化意图 ───
+  else if (parsed.confidence === 'medium' && parsed.types.length > 0) {
+    const mt = parsed.types[0];
+    const typeAngles = {
+      '追星': {
+        '抖音': [{title:'学跳本命最新编舞：从翻车到天秀',reason:'追星+舞蹈=抖音最强组合'},{title:'去看演唱会但不发朋友圈是什么体验',reason:'反常规视角+真情实感'},{title:'当本命歌出现在超市——社死名场面',reason:'公共场合+粉丝碰撞=天然笑点'},{title:'立flag：不学会本命新舞不换头像',reason:'flag挑战+翻车=安全爆款'},{title:'拆解本命一支舞：每个动作都有故事',reason:'深度解析，铁粉最爱'}],
+        '小红书': [{title:'本命同款穿搭/妆容/生活方式：普通人复刻',reason:'同款分享=小红书最强追星品类'},{title:'追星手账/周边收纳：我的年度爱豆记忆',reason:'手账+周边=小红书特有追星美学'},{title:'写给本命的一封信：追了X年的真心话',reason:'书信体=情感内容王牌'},{title:'本命被低估的X首歌：从编曲到歌词全分析',reason:'信息差安利=最强种草'},{title:'一个人去看本命演唱会：治愈独旅Vlog',reason:'独旅+追星=双主题共鸣'}],
+      },
+      '职场': {
+        '抖音': [{title:'打工人上班前vs下班后的脸',reason:'反差共鸣'},{title:'用离职心态上班：世界不一样了',reason:'反内卷话题'},{title:'AI帮我做完一周工作后...',reason:'AI+职场'},{title:'不同工资的人中午吃什么',reason:'金钱对比'},{title:'辞职第一个月：后悔了吗',reason:'人生转折'}],
+        '小红书': [{title:'准时下班的人做对了什么',reason:'职场干货'},{title:'办公桌布置：打工人的一平米治愈',reason:'桌面美学'},{title:'跳槽涨薪50%的经验总结',reason:'涨薪攻略'},{title:'独居打工人下班后的自愈3小时',reason:'下班生活'},{title:'给25岁还在迷茫的自己10句大实话',reason:'年龄节点分享'}],
+      },
+    };
+    let sources = (typeAngles[mt] && typeAngles[mt][platform]) || (typeAngles[mt] && typeAngles[mt]['抖音']) || [];
+    // 从TOPIC_DB补充
+    if (cat !== '全部' && TOPIC_DB[cat]) { for (const t of TOPIC_DB[cat].slice(0,5)) { if (!sources.find(s => s.title === t.title)) sources.push(t); } }
+    if (sources.length < 5) {
+      for (const c of Object.keys(TOPIC_DB)) { if (!TOPIC_DB[c]) continue; for (const t of TOPIC_DB[c]) { if (sources.length >= 10) break; if (!sources.find(s => s.title === t.title)) sources.push(t); } }
+    }
+    for (const t of sources.sort(() => Math.random() - 0.5)) {
+      if (topics.length >= 5 || usedTitles.has(t.title)) continue;
+      usedTitles.add(t.title);
+      topics.push({ ...t, outline: generateOutline(t.title, cat, platform), shootDir: [pf.shootStyle, `探索「${mt}」在${platform}的最佳切入方式`], tags: [...(t.tags || []), platform, mt].filter((v,i,a)=>a.indexOf(v)===i) });
+    }
+  }
+  // ─── LOW CONFIDENCE: 直接AI路由 + 模板参考 ───
+  else {
+    // 如果之前已经生成过AI路由，尝试用不同模板
+    if (usedTitles.size > 0) {
+      // 用上次没展示过的TOPIC_DB模板补充
+      for (const c of Object.keys(TOPIC_DB)) {
+        if (!TOPIC_DB[c]) continue;
+        for (const t of TOPIC_DB[c].sort(() => Math.random() - 0.5)) {
+          if (topics.length >= 5) break;
+          if (usedTitles.has(t.title)) continue;
+          usedTitles.add(t.title);
+          topics.push({ ...t, outline: generateOutline(t.title, cat, platform), shootDir: [pf.shootStyle, `从${c}垂类切入「${idea}」`], tags: [...(t.tags || []), platform, c].filter((v,i,a)=>a.indexOf(v)===i) });
+        }
+      }
+    }
+    if (topics.length < 3) return buildAiTopicRouteV2(idea, cat, platform, duration, pf);
+  }
+  if (topics.length < 3) return buildAiTopicRouteV2(idea, cat, platform, duration, pf);
+  return topics.slice(0, 5).map(t => ({ ...t, titles: t.titles || generateTitles(t.title, cat, platform), tags: [...(t.tags || []), platform, duration].filter((v,i,a)=>a.indexOf(v)===i), reason: t.reason || `基于「${idea}」从${cat}垂类+${platform}平台切入` }));
+}
+
+// ============================================================
+//  AI深度创作路由 V2：兼顾AI入口+模板参考
+// ============================================================
+function buildAiTopicRouteV2(idea, cat, platform, duration, pf) {
+  const r = [];
+  r.push({
+    title: `🤖 AI 深度分析：「${idea}」`,
+    reason: `你的输入需要AI深度理解。点击发送给我，我会搜索各平台热点，深入分析后给出5个高价值选题+完整脚本`,
+    tags: ['AI深度创作','智能分析'],
+    titles: ['我需要你帮我做深度选题分析...'],
+    outline: [`理解「${idea}」真实含义和受众`,`搜索${cat}垂类在${platform}上近期爆款`,`生成5个具体选题（含3个标题+大纲+拍摄方向）`,`输出可直接使用的分镜脚本`],
+    shootDir: [pf.shootStyle, '直接发送给我——我能比任何模板更懂你的想法'],
+    isAiRoute: true,
+  });
+  const pool = []; const seen = new Set();
+  if (cat !== '全部' && cat !== '融合垂类' && TOPIC_DB[cat]) pool.push(...TOPIC_DB[cat]);
+  pool.push(...(TOPIC_DB['融合垂类'] || []));
+  for (const t of pool.sort(() => Math.random() - 0.5)) {
+    if (r.length >= 5 || seen.has(t.title)) continue; seen.add(t.title);
+    r.push({ ...t, titles: generateTitles(t.title, cat, platform), outline: generateOutline(t.title, cat, platform), shootDir: [pf.shootStyle], source: 'template', reason: `（模板参考）基于${cat}垂类趋势数据，非AI深度定制` });
+  }
+  return r.slice(0, 5);
+}
+
+function generateTitles(core, cat, platform) {
+  const hooks = {
+    '舞蹈': ['我学了{0}天，结果...', '普通人跳{0}能有多绝？', '这个舞我看了{0}遍', '零基础挑战{0}', '{0}秒学会这个动作'],
+    '颜值': ['素颜状态下的我vs全妆', '花了{0}元改造自己', '当你不再讨好任何人', '这是不是你想要的{0}？', '一键生成你的{0}'],
+    'Vlog': ['一个人{0}的真实一天', '{0}个小时不碰手机的我', '我在{0}的一天', '普通人的{0}', '{0}改造计划'],
+    '美食': ['{0}元能在{0}吃什么？', '便利店也能做出{0}', '一个人也要好好{0}', '复刻{0}餐厅同款', '深夜治愈{0}'],
+    '穿搭': ['{0}件基础款搭出{0}套', '你的{0}适合这样穿', '花了{0}元改造衣柜', '一文看懂{0}风格', '{0}身材穿搭指南'],
+    '科技': ['用AI做了{0}，结果...', '{0}个网站改变你的{0}', '普通人用{0}也能', '实测{0}天后的结论', '{0}居然还能这样用'],
+    '情感': ['给{0}岁自己的话', '那些年我们{0}', '一个人也可以{0}', '如果当时我{0}', '{0}教会我的事'],
+    '搞笑': ['当{0}遇上{0}', '普通人的{0}日常', '这是我{0}的样子', '{0}名场面还原', '如果你也{0}'],
+    '健身': ['{0}天练出{0}', '不用器械也能{0}', '健身{0}年的我告诉你', '{0}分钟{0}训练', '一个人也能{0}'],
+    '旅行': ['{0}元穷游{0}', '一个人去{0}', '本地人才知道的{0}', '{0}天{0}城市漫游', '不规划去{0}'],
+  };
+  const defaultHooks = ['{0}的正确打开方式', '关于{0}这件事', '你可能不知道的{0}', '{0}天体验{0}', '重新认识{0}'];
+  const hookSet = hooks[cat] || defaultHooks;
+  return hookSet.map(h => h.replace(/\{0\}/g, core)).slice(0, 5);
+}
+
+function generateOutline(title, cat, platform) {
+  const pfFraming = getPlatformFraming(platform || '抖音');
+  return [
+    `开头：用「${title}」最反常识/最有冲击力的角度切入（${pfFraming.framing[0]}），3秒内抓注意力`,
+    `第一部分：展示核心内容/冲突（${pfFraming.framing.slice(0,3).join('/')}），制造「必须看完」的欲望`,
+    `第二部分：提供实用价值/情感共鸣，让观众觉得「值得收藏/转发」`,
+    `结尾：${platform === '小红书' ? '行动号召+收藏引导+关注' : platform === 'YouTube' ? '订阅引导+下期预告+评论互动' : '情感升华+点赞收藏关注+评论区互动'}`
+  ];
+}
+
+function generateShootDir(cat, platform) {
+  const dirs = {
+    '抖音': ['竖屏9:16','快节奏剪辑','卡点BGM','前3秒必须有钩子','字幕大且清晰'],
+    '小红书': ['画质清晰柔和','低饱和滤镜','封面图精美','文字说明详细','氛围感优先'],
+    'TikTok': ['竖屏，全球受众','音乐选用TikTok热门BGM','无语言或加英文字幕','节奏极快','挑战标签必备'],
+    'YouTube': ['可横屏可竖屏','标题SEO优化','描述区放时间戳','封面图点击率优先','长尾流量思维'],
+  };
+  return dirs[platform] || dirs['抖音'];
+}
+
+// ============================================================
+//  TOPIC DB: 选题数据库
+// ============================================================
+const TOPIC_DB = {
+  '舞蹈': [
+    { title:'「普通人学爆款舞」7天挑战记录', reason:'成长记录+挑战感，追更率高，舞蹈垂类最佳起步格式', tags:['挑战','成长','连载'] },
+    { title:'不同年代BGM跳同一个舞步', reason:'怀旧+对比，强烈反差，评论区「你是哪个年代的」讨论热', tags:['怀旧','对比','搞笑'] },
+    { title:'街头随机邀人一起跳舞', reason:'真实互动+陌生人社交，情感触点多，抖音算法极爱推', tags:['街拍','互动','真实'] },
+    { title:'同一首歌10种舞蹈风格', reason:'内容量大+展示能力，收藏率极高', tags:['展示','多风格','干货'] },
+    { title:'「盲跳」即兴舞蹈挑战', reason:'即兴真实感，不可预测=观看吸引力', tags:['即兴','真实','挑战'] },
+    { title:'跨垂类：舞蹈+穿搭变装舞蹈', reason:'舞蹈+穿搭双爆款元素叠加，流量叠加效果显著', tags:['融合','穿搭','变装'] },
+    { title:'零基础挑战热门舞蹈：从第一天到第七天', reason:'成长弧线明显，观众有追更欲望，新手友好', tags:['新手','成长','连载'] },
+    { title:'在地铁站/超市/公园突然跳舞', reason:'公共空间+即兴表演，视觉冲击力极强，极易病毒传播', tags:['公共空间','即兴','反差'] },
+    { title:'一段舞换5种服装风格', reason:'服装对比+舞蹈展示双重内容，视觉信息量大', tags:['服装','对比','视觉'] },
+    { title:'和路人合跳一支舞的10种反应', reason:'真实社交互动不可预测，惊喜感和尴尬感并存', tags:['互动','真实','惊喜'] },
+    { title:'用慢动作拆解爆款舞的每个动作', reason:'教学向内容，收藏率和粉丝黏性极高', tags:['教学','慢动作','干货'] },
+    { title:'舞蹈比赛翻车名场面回顾', reason:'失败感真实，观众爱看「翻车」反差内容', tags:['翻车','搞笑','真实'] },
+  ],
+  '颜值': [
+    { title:'「整活妆」每期夸张一个部位', reason:'猎奇感强，完播率高，话题讨论性强', tags:['搞笑','猎奇','系列'] },
+    { title:'三分钟极简通勤妆', reason:'实用性极强，打工人刚需，收藏转发率高', tags:['干货','实用','教程'] },
+    { title:'素颜护肤+早餐routine完整记录', reason:'生活方式完整感，代入感强，多平台通用', tags:['routine','生活','综合'] },
+    { title:'平价产品复刻大牌妆效', reason:'平替话题长期热门，性价比刚需', tags:['平替','种草','干货'] },
+    { title:'跨垂类：颜值+情感「失恋后重新爱自己」', reason:'情感共鸣+变美动力，双重触点', tags:['情感','成长','颜值'] },
+    { title:'「你的脸适合什么风格」测评', reason:'互动感强，观众参与度高', tags:['互动','测评','系列'] },
+    { title:'化妆前后对比：同样的光线同样的衣服', reason:'去滤镜的真诚对比，观众信任度高，评论区互动热', tags:['对比','真诚','信任'] },
+    { title:'不同国家审美标准下的同一张脸', reason:'跨文化话题，讨论性极强，传播范围广', tags:['跨文化','讨论','多样'] },
+    { title:'只用5件化妆品完成全妆', reason:'极简理念+实用教程，降低美妆门槛，新手最爱', tags:['极简','教程','新手'] },
+    { title:'不同价格区间同款妆效对比', reason:'价值感内容，观众「赚到」感觉强烈，收藏转发双高', tags:['对比','价值','种草'] },
+    { title:'妆容演变史：从小学到现在', reason:'时间跨度+成长叙事，情感共鸣和视觉对比并存', tags:['时间','成长','对比'] },
+    { title:'按心情化妆：7种心情7个妆面', reason:'情绪化+个性化，每个人都能对号入座', tags:['情绪','个性','系列'] },
+  ],
+  'Vlog': [
+    { title:'「普通人的一天」极简Vlog', reason:'无门槛，算法友好，新博主最佳起步格式', tags:['日常','简单','入门'] },
+    { title:'租房改造前后对比', reason:'视觉反差大，收藏率极高', tags:['改造','居家','对比'] },
+    { title:'戒手机7天的生活记录', reason:'当下共鸣话题，评论区热议', tags:['挑战','反思','话题'] },
+    { title:'一个人搬家到新城市第一周', reason:'人生节点，情感共鸣强', tags:['人生节点','真实','情感'] },
+    { title:'跨垂类：Vlog+美食「独自一人的一顿饭」', reason:'治愈系，独居话题共鸣', tags:['美食','独居','治愈'] },
+    { title:'用胶片相机记录一整天', reason:'复古美学，质感内容', tags:['美学','复古','质感'] },
+    { title:'凌晨4点的城市：早起一周的完整记录', reason:'反常规时间线，猎奇+励志，日出画面天然高质感', tags:['早起','城市','猎奇'] },
+    { title:'24小时不用任何电子产品', reason:'数字排毒话题持续热搜，挑战难度适中，试验性内容', tags:['挑战','数字排毒','反思'] },
+    { title:'和陌生人交换一天生活', reason:'社交实验+对比内容，不可预测性造就观看欲望', tags:['交换','社交','实验'] },
+    { title:'我在XX城市每月花多少钱？完整账单', reason:'财务透明话题，实用性极强，观众参考价值高', tags:['财务','透明','实用'] },
+    { title:'用一部手机记录周末48小时', reason:'设备门槛最低化，鼓励观众「你也可以拍」', tags:['手机','鼓励','记录'] },
+    { title:'出租屋的一平米改造计划', reason:'小空间改造是租房族刚需，极度实用+视觉满足', tags:['租房','改造','实用'] },
+  ],
+  '美食': [
+    { title:'宿舍无厨房挑战：热水壶做三餐', reason:'猎奇+实用，学生刚需', tags:['猎奇','学生','挑战'] },
+    { title:'复刻餐厅爆款菜价格PK', reason:'高价值感+省钱，转发率极高', tags:['复刻','省钱','PK'] },
+    { title:'一个人的深夜疗愈食物', reason:'情感共鸣，治愈感，夜间推送效果好', tags:['情感','治愈','深夜'] },
+    { title:'「失败美食」合集：学做菜的真实记录', reason:'真实感，笑点多，去滤镜化', tags:['真实','搞笑','成长'] },
+    { title:'便利店食品升华成精致餐食', reason:'反差感，极强复刻欲望', tags:['反差','创意','实用'] },
+    { title:'异国风味+中式调料的融合菜', reason:'创意感强，美食博主差异化选题', tags:['创意','融合','差异化'] },
+    { title:'每天只花20元做三餐：一周挑战', reason:'极限预算挑战，观众代入感强，"要是我也可以"心理', tags:['预算','挑战','实用'] },
+    { title:'外卖吃腻了？5道15分钟快手菜', reason:'打工人痛点精准打击，时间短+好吃=双杀', tags:['快手','打工人','实用'] },
+    { title:'全球不同国家泡面吃法合集', reason:'泡面=最大公约数话题，创意感足，参与门槛极低', tags:['泡面','全球','创意'] },
+    { title:'一个人的生日蛋糕：自己给自己过生日', reason:'独居情感共鸣，温暖治愈，评论区能成情感倾诉场', tags:['独居','生日','情感'] },
+    { title:'同一食材5种完全不同国家做法', reason:'食材=常量，做法=变量，知识密度高，收藏必选', tags:['食材','多国','知识'] },
+    { title:'深夜厨房：只用一个锅能做什么', reason:'设备极简+深夜场景，双痛点叠加，极强代入感', tags:['极简','深夜','场景'] },
+  ],
+  '穿搭': [
+    { title:'同一件基础款7天7种穿法', reason:'实用性极强，展示搭配思路，收藏率爆高', tags:['实用','基础款','系列'] },
+    { title:'100元以内整套高级感穿搭', reason:'平价+高级感双重吸引，穿搭类长期热搜', tags:['平价','高级感','种草'] },
+    { title:'根据MBTI推荐穿搭风格', reason:'MBTI话题持续热门，个性化内容', tags:['MBTI','个性化','互动'] },
+    { title:'跨垂类：穿搭+旅行「旅行穿搭不重样」', reason:'双垂类引流，实用+美学', tags:['旅行','融合','攻略'] },
+    { title:'「你的身材适合什么版型」指南', reason:'强烈个人化需求，精准触达', tags:['实用','个性化','教程'] },
+    { title:'从快时尚拼出「日/韩/法风」', reason:'快时尚搭配，实操性强', tags:['品牌','风格','实操'] },
+    { title:'拆解明星私服：普通人能复刻的部分', reason:'粉丝效应+实用穿搭双驱动，天然有搜索流量', tags:['明星','私服','复刻'] },
+    { title:'不同场合同一件衣服怎么搭', reason:'场景化搭配，实用性极强，解决具体问题', tags:['场景','实用','方案'] },
+    { title:'颜色搭配法则：三色以内搞定一周穿搭', reason:'颜色公式=傻瓜教学，零基础也能学会', tags:['颜色','公式','教学'] },
+    { title:'旧衣服改造：把5年前的T恤穿出新感觉', reason:'可持续理念+创意改造，价值观年轻人认可', tags:['改造','可持续','创意'] },
+    { title:'根据当天心情决定今天穿什么', reason:'情绪化穿搭=每个人的日常，共鸣感强烈', tags:['情绪','日常','共鸣'] },
+    { title:'跨垂类：穿搭+古风「汉服日常化混搭」', reason:'传统文化+现代审美，小众破圈潜力大', tags:['古风','混搭','破圈'] },
+  ],
+  '科技': [
+    { title:'AI帮我做了一周工作，结果是？', reason:'AI话题超高热，职场共鸣', tags:['AI','测评','职场'] },
+    { title:'普通人用手机拍出电影感大片', reason:'技巧干货，门槛低，收藏率高', tags:['摄影','干货','手机'] },
+    { title:'这10个网站你可能不知道但超有用', reason:'信息差内容，转发率极高', tags:['干货','工具','转发'] },
+    { title:'用AI生成视频脚本，真实体验', reason:'AI工具测评，实操向', tags:['AI','测评','实操'] },
+    { title:'穷人如何用免费工具做出专业内容', reason:'平替思维，创作者刚需', tags:['工具','免费','创作者'] },
+    { title:'把ChatGPT当作个人助理：一周实测', reason:'AI实战测评，每个人都在关心的话题', tags:['AI','助理','实测'] },
+    { title:'拆解一个爆款APP：为什么它能火？', reason:'产品思维+好奇心驱动，知识型内容', tags:['产品','分析','知识'] },
+    { title:'手机隐藏功能大揭秘（你绝对没用过的5个）', reason:'「原来还能这样」的惊喜感是短视频最强留存机制', tags:['手机','隐藏','惊喜'] },
+    { title:'一个人用AI做了整个公司的事', reason:'效率提升+AI能力展示，猎奇+实用双驱动', tags:['AI','效率','猎奇'] },
+    { title:'不同价位手机拍同一个场景对比', reason:'横向测评类内容天然高收藏，购买决策参考', tags:['对比','测评','参考'] },
+  ],
+  '情感': [
+    { title:'「一个人也可以很好」30天记录', reason:'独立人格共鸣，女性受众强', tags:['独立','成长','女性'] },
+    { title:'那些年我们说的「互相伤害」', reason:'共同记忆，共鸣感强', tags:['共鸣','回忆','故事'] },
+    { title:'和闺蜜说「我需要你」', reason:'珍视友情话题，温情', tags:['友情','温情','节点'] },
+    { title:'跨垂类：情感+颜值「失恋后变美了」', reason:'情绪转折大，共鸣点双重叠加', tags:['融合','成长','变美'] },
+    { title:'「我的父母不理解我」真实对话', reason:'代际话题，年轻人共鸣', tags:['家庭','代际','真实'] },
+    { title:'在备忘录里写给前任但永远不会发出的信', reason:'未完成情感的全网最大公约数，评论区变情感树洞', tags:['前任','树洞','书信'] },
+    { title:'25岁/30岁/35岁还在单身的人后来怎样了', reason:'年龄+婚恋双重焦虑话题，横向陪伴感', tags:['年龄','单身','陪伴'] },
+    { title:'一年前的今天你在做什么？翻相册挑战', reason:'时间对比+回忆杀，极强共鸣感和参与欲', tags:['回忆','对比','挑战'] },
+    { title:'一个人在陌生城市的第一年：心碎和成长', reason:'城市漂泊者的情感投射，看到自己', tags:['城市','漂泊','成长'] },
+    { title:'和十年好友吵了一架之后', reason:'长期关系修复，真实故事，观众有参与讨论欲', tags:['友情','冲突','真实'] },
+  ],
+  '搞笑': [
+    { title:'「社恐在职场」日常还原', reason:'职场社恐共鸣，全体打工人笑中带泪', tags:['职场','社恐','共鸣'] },
+    { title:'不同星座遇到同一件事的反应', reason:'星座话题持续热，互动评论多', tags:['星座','互动','话题'] },
+    { title:'「中国父母」说话方式还原', reason:'家庭共鸣，全年龄覆盖', tags:['家庭','代际','共鸣'] },
+    { title:'POV: 你是卷王的同事', reason:'职场剧情，代入感强', tags:['POV','职场','剧情'] },
+    { title:'打工人出门前vs下班后的脸', reason:'反差搞笑，零门槛共鸣', tags:['反差','打工人','真实'] },
+    { title:'不同工资水平的人怎么花钱', reason:'金钱差距+消费心理，全民讨论话题', tags:['金钱','对比','讨论'] },
+    { title:'普通话不好的人打电话时有多崩溃', reason:'方言+普通话反差，全国通用笑点', tags:['方言','反差','通用'] },
+    { title:'当代年轻人的迷惑行为图鉴', reason:'观察类搞笑，精准吐槽引发「这就是我」共鸣', tags:['观察','吐槽','共鸣'] },
+    { title:'穿同款衣服拍全家福：结果是灾难还是惊喜', reason:'家庭互动+穿搭反差，老少皆宜', tags:['家庭','穿搭','反差'] },
+    { title:'第一次______的翻车实录', reason:'填空式选题，用户参与感强，可系列化', tags:['翻车','第一次','系列'] },
+  ],
+  '健身': [
+    { title:'从0开始练的90天真实记录', reason:'成长记录，励志向，追更率高', tags:['成长','记录','励志'] },
+    { title:'5分钟高效HIIT随时随地可做', reason:'碎片时间，实用性强', tags:['HIIT','实用','碎片'] },
+    { title:'减肥期间外出吃饭点菜指南', reason:'痛点刚需，打工族覆盖广', tags:['饮食','实用','外食'] },
+    { title:'跨垂类：健身+颜值「练出好身材后买衣服」', reason:'健身成果落地，双垂类覆盖', tags:['融合','穿搭','动力'] },
+    { title:'不同体型的同一套训练：效果差多少', reason:'体型差异化教学，每个人都能找到自己的版本', tags:['体型','教学','差异'] },
+    { title:'只用一把椅子完成的全身训练', reason:'设备极简主义，居家健身是永恒刚需', tags:['居家','极简','全身'] },
+    { title:'健身后身体变化的10个意外惊喜', reason:'正向激励内容，鼓励犹豫不决的人开始', tags:['激励','变化','正向'] },
+    { title:'连续30天每天100个俯卧撑：真实变化', reason:'简单可量化的挑战，极强追更欲望', tags:['挑战','30天','记录'] },
+    { title:'健身前后拍照对比：不是P的，全是真的', reason:'真实对比是健身类最高价值内容，天然种草', tags:['对比','真实','种草'] },
+    { title:'一个人的户外运动：不办卡也能练', reason:'打破「健身=健身房」刻板印象,降低心理门槛', tags:['户外','免费','入门'] },
+  ],
+  '旅行': [
+    { title:'500元穷游一座城市完整攻略', reason:'预算旅行话题持续热，转发收藏率极高', tags:['攻略','穷游','实用'] },
+    { title:'一个人深夜城市漫步', reason:'治愈感，孤独感共鸣', tags:['一人游','治愈','美学'] },
+    { title:'不做攻略的随机旅行', reason:'反规划话题，猎奇感', tags:['随机','自由','猎奇'] },
+    { title:'「不值得去」景点真实测评', reason:'反向内容，强烈好奇心', tags:['测评','反向','话题'] },
+    { title:'旅行中陌生人的温暖瞬间', reason:'情感触点，真实感', tags:['情感','真实','温情'] },
+    { title:'本地人从小吃到大的店：游客不知道系列', reason:'信息差内容，价值感极强，收藏转发爆高', tags:['本地','信息差','价值'] },
+    { title:'24小时极限打卡一座城市', reason:'极限挑战+城市攻略双格式，时间压缩制造紧迫感', tags:['极限','打卡','攻略'] },
+    { title:'一个人的旅行：从不敢到享受', reason:'独旅心理建设，每个人心中都有一个独自出发的梦', tags:['独旅','心理','成长'] },
+    { title:'旅行中最离谱的住宿体验合集', reason:'猎奇住宿内容，从树屋到胶囊，视觉冲击力强', tags:['住宿','猎奇','合集'] },
+    { title:'一张地图随机丢飞镖决定去哪', reason:'随机旅行话题升级版，仪式感+不可预测性', tags:['随机','仪式','挑战'] },
+  ],
+  '短剧': [
+    { title:'一本书改编成3分钟微短剧', reason:'IP改编微短剧是2026最大风口，门槛降低', tags:['IP','改编','创作'] },
+    { title:'「素人出演」微短剧全流程', reason:'短剧制作民主化，素人也能拍', tags:['素人','制作','教程'] },
+    { title:'AI辅助生成短剧分镜脚本', reason:'AI+短剧工具化，创作者刚需', tags:['AI','工具','创作'] },
+    { title:'最短7秒讲完一个故事', reason:'极短叙事挑战，完播率极高', tags:['极短','挑战','叙事'] },
+    { title:'跨垂类：短剧+情感「3分钟看哭」系列', reason:'微短剧情感向最易出圈，CP感是核心驱动力', tags:['情感','CP','出圈'] },
+    { title:'用手机拍一部短剧：从脚本到成片', reason:'降维教程，素人创作者最需要的全流程指南', tags:['手机','全流程','教程'] },
+    { title:'同一场景8种不同结局', reason:'变量控制+无限可能，观众参与选择结局', tags:['变量','互动','选择'] },
+    { title:'反转短剧：你以为的坏人其实是好人', reason:'反转是短剧最核心的钩子，编剧方法论拆解', tags:['反转','编剧','方法'] },
+    { title:'30秒讲完一部电影：能有多离谱', reason:'内容压缩挑战，完播率高，幽默向', tags:['压缩','挑战','幽默'] },
+  ],
+  '体育': [
+    { title:'世界杯期间X垂类怎么蹭热点？', reason:'6周世界杯窗口期，任何垂类都可借势', tags:['世界杯','借势','策略'] },
+    { title:'10秒看懂一场比赛：极简解说', reason:'降低体育理解门槛，吸引非球迷', tags:['解说','极简','破圈'] },
+    { title:'球迷观赛反应对比：赛前vs赛后', reason:'情感反差，共鸣感极强', tags:['反差','球迷','共鸣'] },
+    { title:'凌晨看球吃点啥？观赛美食系列', reason:'体育+美食交叉，实用性强', tags:['美食','观赛','实用'] },
+    { title:'跨垂类：体育+穿搭「球衣变日常穿搭」', reason:'运动美学日常化，时尚破圈', tags:['穿搭','运动','日常'] },
+    { title:'零基础看球指南：5分钟搞懂XX运动', reason:'体育破圈利器，降低观赛门槛', tags:['入门','破圈','指南'] },
+    { title:'世界杯冷知识：99%的人不知道', reason:'信息差+冷知识，分享欲最强的内容类型之一', tags:['冷知识','分享','话题'] },
+    { title:'一个人对着屏幕呐喊：球迷在家观赛实录', reason:'独居观赛真实记录，球迷身份共鸣', tags:['独居','观赛','真实'] },
+  ],
+  '融合垂类': [
+    { title:'舞蹈+旅行：在世界各地即兴起舞', reason:'两个高互动垂类叠加，视觉冲击+旅行向往双触发', tags:['舞蹈','旅行','融合'] },
+    { title:'颜值+美食：今日穿搭配今日美食', reason:'生活美学完整感，OOTD+美食双重种草', tags:['颜值','美食','生活'] },
+    { title:'Vlog+情感：独自生活第一年的心碎与成长', reason:'人生节点叙事，情感共鸣，追更留存率高', tags:['Vlog','情感','成长'] },
+    { title:'搞笑+健身：完全不会运动的人硬撑一个月', reason:'反差搞笑，成长弧度，全覆盖受众', tags:['搞笑','健身','反差'] },
+    { title:'穿搭+科技：用AI帮我搭配一个月的衣服', reason:'AI话题+实用穿搭，新奇内容格式', tags:['穿搭','AI','实用'] },
+    { title:'美食+情感：失眠时我只想吃这些食物', reason:'深夜情绪共鸣+美食治愈双重触发', tags:['美食','情感','治愈'] },
+    { title:'旅行+美食：跟着本地人吃遍一座城', reason:'双垂类搜索量叠加，实用性强', tags:['旅行','美食','本地'] },
+    { title:'舞蹈+短剧：用舞步讲一个故事', reason:'艺术化叙事，差异化强，竞争少', tags:['舞蹈','短剧','叙事'] },
+    { title:'颜值+搞笑：整活式护肤教程', reason:'笑点+干货，这个组合几乎不会有差的数据', tags:['颜值','搞笑','干货'] },
+    { title:'Vlog+穿搭：一周通勤穿搭全记录', reason:'OOTD+Vlog双格式，信息密度高', tags:['Vlog','穿搭','通勤'] },
+    { title:'情感+旅行：换个城市重新开始', reason:'人生转折叙事，情感共鸣+旅行美学', tags:['情感','旅行','转折'] },
+    { title:'科技+美食：用AI设计一周食谱并实测', reason:'AI落地生活场景，实用性+猎奇双驱动', tags:['科技','美食','AI'] },
+  ],
+};
+
+// ============================================================
+//  CATEGORY-AWARE CONTENT POOLS（紧挨 TOPIC_DB，避免 TDZ）
+// ============================================================
+const CAT_POOLS = {
+  '美食': {
+    hookLines: (t, ref, pf) => [
+      `凌晨一点，我只花了${pf==='抖音'?'15':'7'}块钱，做出了刷爆${pf||'全网'}的「${t}」——`,
+      `为什么你做的「${t}」永远不如夜市那家好吃？因为你漏了最关键的一步——`,
+      `学会这一招，以后半夜饿了你再也不会点外卖了`,
+      `我吃了20年「${t}」才发现——之前全做错了`,
+      `这道「${t}」的秘密不在调料，在时间——`,
+      `当你深夜打开冰箱只剩三样东西：鸡蛋、剩饭、和今天刚学会的「${t}」`,
+      `厨房里唯一不需要天赋的菜就是「${t}」——但我第一次还是差点把厨房点了`,
+      `朋友来我家吃完「${t}」后沉默了十秒，然后说了一句话——`,
+      `这道「${t}」我妈教我的时候说了一句话，我当时没懂，现在懂了`,
+    ],
+    coreLines: (t) => [
+      `先说食材——不是越贵越好，是越鲜越好。什么叫鲜？你拿起来闻一下就知道了`,
+      `第二步是很多人翻车的地方：火候。中火预热30秒，下锅后转小火慢烹`,
+      `最后也是最容易被忽略的一步——出锅前的一勺灵魂酱汁`,
+      `关键一步来了——手的温度。别笑，面点类手温影响非常大`,
+      `很多人不知道「${t}」的成败在预处理阶段就决定了——就是那一步腌渍/浸泡`,
+      `调味是分阶段的，不是一次性倒进去就好。不同调味料在不同温度下发力`,
+      `翻面的时机不是你想象的"看到颜色变了"——是闻到香气的那一刻`,
+      `很多人做「${t}」失败，不是技术问题——是太急了。火候的本质是耐心`,
+      `一个很多人不知道的小技巧：出锅前30秒关火，用余温完成最后的变化`,
+    ],
+    emotionLines: (t) => [
+      `其实「${t}」对我来说不只是一道菜。它是加班到凌晨回到空荡荡的家，唯一能让你觉得"今天也不算太糟"的那个味道`,
+      `我奶奶以前也常做这个。她走后我试了好多配方，只有今晚，最接近记忆里的味道`,
+      `第一次做「${t}」是失恋那天。我现在已经不记得那个人长什么样了，但我还记得那盘菜多咸`,
+      `妈妈每次打电话都要问我：今天吃了什么？她可能只是想知道——我还好好的`,
+      `一个人做饭最难的其实不是技术，是对付那个"只为自己做"的念头。但做「${t}」那天，我没有犹豫`,
+      `人这一辈子会吃很多顿饭，但能记住的就那么几顿——不是因为好吃，是因为那一刻的你，是完整的`,
+      `把「${t}」的照片发给妈妈，她回了四个字："终于会了"。然后我就哭了`,
+    ],
+    climaxLines: (t) => [
+      `出锅那一刻，整个厨房都在发光。热气扑到脸上那一瞬间——我没有在做菜，我是在跟过去的自己和解`,
+      `第一口下去的瞬间我愣住了。原来真正好吃的东西，是会让人眼眶发酸的`,
+      `切下去的那一刀酥壳碎裂的声音——ASMR博主都不敢这么拍`,
+      `颜色、香气、声音——「${t}」合格的瞬间不需要测评，你自己会知道的`,
+      `趁热吃的第一口和凉了之后的最后一口，是两道完全不同的菜——就像同一个人在不同时期遇到的你`,
+      `当「${t}」完美出锅的那一刻，我突然理解了那些沉迷厨房的人——你在创造的是一瞬间的幸福`,
+      `最难的从来不是食谱，是"今天我想为自己好好做一顿饭"这个念头。当你拿起锅的那一刻，「${t}」就已经成功了`,
+    ],
+  },
+  '舞蹈': {
+    hookLines: (t,ref,pf) => [
+      `${ref&&ref.platform?ref.platform+'热搜':pf||'舞蹈区'}霸榜第${Math.floor(Math.random()*7+3)}天，${Math.floor(Math.random()*8+5)}万人已经跟着跳了——`,
+      `舞蹈老师说我永远学不会这支「${t}」——我用${Math.floor(Math.random()*7+3)}天拿下了`,
+      `当我把「${t}」放慢到0.5倍速——才发现原来看似简单的动作里藏着这么多细节`,
+      `学「${t}」第一天 vs 第七天：差别大到我自己都不敢认`,
+      `很多人问我为什么跳「${t}」——其实不是因为我多喜欢跳舞，是因为...`,
+      `这支「${t}」的核心不在脚上，在你看不到的这块肌肉——`,
+      `先别急着跳——我犯了${Math.floor(Math.random()*3+3)}个错，你千万别踩`, 
+      `把「${t}」练了100遍之后，我发现了一个反直觉的规律`,
+    ],
+    coreLines: (t) => [
+      `先拆第一段：注意手腕的角度，大部分人舞感掉分全掉在这`,
+      `第二段是整支舞的killing part——重心转移要果断，收腹、提胯、展开，三个动作一气呵成`,
+      `很多人这一段跟不上的原因是呼吸。对，呼吸。憋气会让肌肉僵硬，越僵硬越慢`,
+      `这个过渡动作看起来简单，但它是整支舞的骨架。我拆成三个小步骤单独练`,
+      `最容易忽视的是眼神方向——你的身体可以完美，但眼神不对，整支舞的气场就散了`,
+      `这段节奏变化是全曲最难的地方——从慢到快的切换点在哪？就在第二个八拍的第三拍`,
+      `很多人卡在这里是因为一直在想"下一个动作是什么"。正确做法是让身体比脑子快——怎么练？`,
+      `如果你在第X秒开始跟不上了——不是你的问题，是原曲这个部分本来就反人体工学`,
+    ],
+    emotionLines: (t) => [
+      `第一天学「${t}」的时候，我真的差点把手机摔了。但是练到第${Math.floor(Math.random()*3+3)}天，音乐响起的瞬间——身体比脑子先知道下一个动作是什么，那种感觉太奇妙了`,
+      `跳「${t}」的时候我什么都不会想。脑子里是空的，只有音乐。可能这就是我离不开跳舞的原因`,
+      `镜子前面那个人从笨拙到流畅，从"我不可能学会"到"我真的做到了"——这就是为什么我永远热爱舞蹈`,
+      `有人问我：成年人学跳舞是不是太晚了？我想说——你的人生里有什么是"太晚"的？除了今晚之后的时间`,
+      `每次跳完「${t}」我都浑身是汗。但那个汗不是累——是从焦虑、自我怀疑、生活压力里蒸发出来的自由`,
+    ],
+    climaxLines: (t) => [
+      `全部动作一遍完美顺下来的那一刻，我在镜子里看到自己笑了——不是得意的笑，是"原来我真的可以"的那种笑`,
+      `最后一个音落下，我站在原地喘了五秒。不是因为累——是因为这一刻我等了整整七天`,
+      `killing part做完的那一秒整个世界都安静了——不是音乐停了，是我心里的噪音全部消失了`,
+      `当你发现自己的影子在墙上跟音乐完美契合的那一刻——你会忘记你在录视频，忘记有没有观众，忘记所有不敢开始的理由`,
+      `每次跳完「${t}」的最后一帧，我都会在镜子里留三秒。不是在看动作有没有瑕疵——是在看，这个人做到了`,
+    ],
+  },
+  'Vlog': {
+    hookLines: (t,ref,pf) => [
+      `${ref&&ref.platform?ref.platform+'上这条':''}「${t}」的评论区，一半在说"这绝对是演的"——另一半在说"这就是我"`,
+      `如果只能用${Math.floor(Math.random()*3+3)}分钟告诉你我是谁，我会用「${t}」`,
+      `你看到的不是「${t}」——是我关掉相机后没拍的部分`,
+      `有人说「${t}」太普通了。我想说的是——普通的每一天，坚持下去就是不普通的一辈子`,
+      `当你把镜头对准自己的生活——第一天和第三十天，你会发现一些拍之前完全没预料到的事`,
+    ],
+    coreLines: (t) => [
+      `没有刻意摆拍，没有脚本。就是镜头开着，切菜、看书、发呆——`,
+      `那种感觉很怪：明明只有我一个人，但看着取景框里的自己，突然就不觉得孤独了`,
+      `最好看的画面永远是计划外的——窗边突然进来的那束光、煮糊的面还在冒烟、翻到一半的书被风吹起的那页`,
+      `很多人做「${t}」最大的误区：把Vlog当广告拍。真实生活的"不完美"才是最贵的内容`,
+      `今天这期我没准备大纲。就想试试——如果完全跟着感觉来，镜头会带我去哪`,
+    ],
+    emotionLines: (t) => [
+      `拍「${t}」被问最多的是"你一个人不无聊吗"。我想说的是——一个人不是孤独，是一个人选择了自由`,
+      `回看「${t}」素材的时候，最打动我的不是任何精心设计的画面——是那5秒我忘了关相机，不小心拍到的自己的表情`,
+      `做「${t}」系列最大的收获：开始认真过每一天了。因为你知道你会回头看，你不想辜负那个回头看的自己`,
+      `有时候一整天什么都没发生——但那个"什么都没发生"的下午，反而是我回看最多的那期「${t}」`,
+    ],
+    climaxLines: (t) => [
+      `最后一个画面停在窗外的夕阳。没有加bgm，没有旁白——因为那一刻太满了，任何声音都是多余`,
+      `关掉相机的那一刻我又打开了——不是要补拍什么，是想再看一眼取景框里的光`,
+      `「${t}」的结尾我删了一百遍。最后想通了——生活没有结尾，只有下一个镜头`,
+      `做完整期「${t}」我坐在电脑前很久没动。不是因为累——是因为第一次觉得，原来我也有值得被记住的一天`,
+    ],
+  },
+  '颜值': {
+    hookLines: (t,ref,pf) => [
+      `${ref&&ref.platform?ref.platform+'上高赞的':''}「${t}」——拍的时候，我眉毛都没化`,
+      `先别划走——关于「${t}」，我有句大实话憋了很久很久`,
+      `做了「${t}」这个妆去上班，同事问我：你今天是不是失恋了？我说：没有，只是终于学会了化妆`,
+      `这是我有生以来第${Math.floor(Math.random()*50+10)}次尝试「${t}」——但是是第一次成功`,
+      `搜索「${t}」教程的结果显示3.2万个——但我试了30个才找到真正有效的方法`,
+      `你去搜「${t}」会发现一堆教程——但没人跟你说这几件事`,
+    ],
+    coreLines: (t) => [
+      `「${t}」的核心不是长什么样，是你敢不敢对自己诚实`,
+      `今天这套look的核心就三个字：少即是多。少的是对别人眼光的在意，多的是对自己的温柔`,
+      `先破除一个迷思：「${t}」不等于浓妆艳抹。最厉害的变化藏在——`,
+      `关键步骤来了：不是产品贵不贵的问题，是顺序对不对的问题。99%的人第一步就错了`,
+      `很多人学「${t}」只看颜色，不看质地。同一支口红在不同质地上差别巨大`,
+      `「${t}」里有一个步骤是可以跳过的——但教程从来不会告诉你。因为那是他们卖货的部分`,
+    ],
+    emotionLines: (t) => [
+      `以前我怎么拍都不满意。后来才想明白——不是长相的问题，是我从来没有真正接受过镜子前面这个人`,
+      `学「${t}」这一年，最大的变化不在脸上——在我敢抬头看别人眼睛了`,
+      `好多人问"你是怎么变自信的"。其实不是变自信了——是不在意了。不在意别人觉得我好不好看`,
+      `「${t}」教会我最重要的不是怎么画眼影——是每天早上坐在镜子前，给自己三分钟"只看自己不评价自己"的时间`,
+    ],
+    climaxLines: (t) => [
+      `这个转身我拍了${Math.floor(Math.random()*10+20)}次。不是要最完美的角度——是每一次快门，都在帮我和镜头里的自己和解`,
+      `当你在镜子里看到「${t}」的完成版——那种感觉不是"变美了"，是"终于对上了"。对上了你心里一直想象的那个自己`,
+      `其实「${t}」最打动我的瞬间，不在前面所有步骤——在卸妆的那一刻。不是因为累了，是因为明天又可以重新画一次了`,
+      `最后一张照片我没有加滤镜。不是因为多完美——是因为我发现，我最想留住的是"真实"`,
+    ],
+  },
+  '穿搭': {
+    hookLines: (t,ref,pf) => [
+      `衣柜里${Math.floor(Math.random()*5+3)}件基础款，搭出「${t}」的${Math.floor(Math.random()*5+5)}种完全不同人格——`,
+      `「${t}」的精髓从来不是穿得贵，是穿得对——`,
+      `同样${Math.floor(Math.random()*4+3)}件衣服，「${t}」让它们从"还行"变成"天哪太会穿了吧"`,
+      `花钱最多的一年反而是穿得最难看的一年——直到我发现了「${t}」的逻辑`,
+      `「${t}」不是风格，是你在不开口之前对世界说的第一句话`,
+    ],
+    coreLines: (t) => [
+      `第一套：「${t}」的灵魂是比例。上短下长、色不过三、点到为止`,
+      `同一件基础款换个搭配思路，通勤秒变约会——差别只在这个领口和鞋子的选择`,
+      `「${t}」里最容易穿出廉价感的是什么？不是面料，是褶皱。出门前花30秒熨一下，效果提升三倍`,
+      `很多人觉得「${t}」要穿得很费劲。恰恰相反——最高级的穿搭是不动声色的。看起来随意，但全是心机`,
+      `「${t}」的黄金法则是：整身只留一个重点。重点太多=没有重点=路人甲`,
+    ],
+    emotionLines: (t) => [
+      `穿搭对我而言不是臭美。是每天早上站在衣柜前，用衣服给自己一句心理暗示：今天我要成为什么样的人`,
+      `「${t}」之后最大的改变：不再盯着别人身上的牌子看了——开始看自己的镜子`,
+      `有人问我为什么花这么多时间想穿什么——因为这是我一天中唯一完全由自己决定的事`,
+      `穿了「${t}」出门那天，在地铁上有人偷偷拍了我。第一次不是因为害怕——是因为被当作inspiration了`,
+    ],
+    climaxLines: (t) => [
+      `当你不再为了别人穿衣服——你的衣服，就会反过来替你说话`,
+      `「${t}」最难的不是搭配技巧，是当你终于找到了自己的风格，却不被身边人理解的时候——你选择继续穿`,
+      `最后一套造型我没有配任何文字——因为「${t}」不需要解释。你看了就知道了`,
+      `其实「${t}」最让人上瘾的，不是穿出去被看到——是穿上身那一刻，自己先笑了`,
+    ],
+  },
+  '科技': {
+    hookLines: (t,ref,pf) => [
+      `这个${ref&&ref.platform?ref.platform+'上爆火的':''}「${t}」，我实打实用了一周，说点别人不敢说的真话——`,
+      `「${t}」的测评你看过很多了——但用过一个月之后还愿意用的，只有我这种固执的人`,
+      `他们说「${t}」能改变世界。我笑了。然后用了一周——现在我不笑了`,
+      `花${Math.floor(Math.random()*4+1)}千块买了「${t}」之后，我恨我自己没有早买/后悔买了`,
+    ],
+    coreLines: (t) => [
+      `先说结论：「${t}」确实有用。但只对一种人有用——愿意花时间去理解它为什么这么设计的人`,
+      `第一个功能实测：在具体场景下远超预期。但有一个前提——你得先了解自己的需求`,
+      `「${t}」最大的问题不是功能——是学习曲线。大多数人不是觉得它不好用，是没熬过前三天`,
+      `横向对比三个竞品：在XX方面「${t}」赢得很彻底，但在YY方面——坦白说，不如B方案`,
+      `「${t}」有一个隐藏功能——官方从来不宣传，但懂的人都在用。就是——`,
+    ],
+    emotionLines: (t) => [
+      `我以前觉得「${t}」这类工具就是智商税。自己上过手之后才懂：工具是中性的，关键看用它的那个人`,
+      `测评「${t}」的时候我经常想到一句话：技术改变生活。但改变生活的从来不是技术——是你愿不愿意被改变`,
+      `为什么很多人买「${t}」最后都吃灰了？不是产品不好——是他们没想清楚自己要解决什么问题`,
+    ],
+    climaxLines: (t) => [
+      `终极建议：「${t}」值不值得？值。但先问自己：你拿它要解决什么问题。想清楚了再下手，别当韭菜`,
+      `「${t}」在我桌上待了一个月，从"这啥玩意"到"离不开"——最大的变化不是产品本身，是我的工作方式`,
+      `如果「${t}」明天从我的生活里消失——说实话，我会慌。不是因为它多厉害，是因为我已经把它变成了我的一部分`,
+    ],
+  },
+  '情感': {
+    hookLines: (t,ref,pf) => [
+      `关于「${t}」，我在备忘录里写了${Math.floor(Math.random()*5+3)}句话——最后只留了这一句`,
+      `如果你正在经历「${t}」，这${Math.floor(Math.random()*2+2)}分钟可能是我今年给你最有用的时间`,
+      `「${t}」这件事，我只跟一个人说过——今天想说给屏幕后面的你听`,
+      `先停一下你正在做的事。你不需要立刻"走出来"——你需要先承认「${t}」是真的`,
+    ],
+    coreLines: (t) => [
+      `第一阶段最难熬。那段时间我每天睁眼就是无尽的......直到某天我突然发现——`,
+      `很多人会说"会过去的"。说实话，不会。它只是慢慢变成你的一部分，不再让你窒息了而已`,
+      `「${t}」的第二阶段是愤怒。愤怒过后是沉默。沉默之后——才有真正的转机`,
+      `关于「${t}」我想说的第一件事：你经历的不是"不正常"。是每一个走出来的人，都走过的路`,
+    ],
+    emotionLines: (t) => [
+      `关于「${t}」学会的最重要的事：有些东西不需要被"解决"，它要被"穿过"。你走完这段路，它就留在身后了`,
+      `最难的时候我每天都写一句话"今天又是新的一天"——写了半年。有天突然发现不需要写了`,
+      `你不需要在「${t}」里"变坚强"——你只需要活着经过它。活过今天。明天再说`,
+    ],
+    climaxLines: (t) => [
+      `写这些的时候我自己也没忍住。不是难过——是终于敢把那些一直堵在喉咙里的东西，一个一个字地写出来了`,
+      `我能坐在这里跟你聊「${t}」——本身就说明了一件事：你是能走出来的。因为你正在想看怎么走出来`,
+      `「${t}」没有标准答案。但有一个人永远知道答案——那就是穿过这一切之后，站在终点回头看自己的你`,
+    ],
+  },
+  '搞笑': {
+    hookLines: (t,ref,pf) => [
+      `当你以为「${t}」已经够离谱的时候——`,
+      `今天这个「${t}」名场面，我笑到自己把手机砸脸上了`,
+      `救命——我朋友非让我拍「${t}」，结果发生了我完全没预料到的事`,
+      `「${t}」的前后反差大到——我邻居来敲我门问我是不是在拆家`,
+    ],
+    coreLines: (t) => [
+      `事情的起因：我只是想做一件普通的事。结果——`,
+      `你以为这就到头了？不，高能全在后半段`,
+      `最离谱的不是「${t}」本身——是旁边那个完全不认识的路人甲的表情`,
+      `回看「${t}」的时候我发现了一个细节——原来整个事件的伏笔在第一秒就埋下了`,
+    ],
+    emotionLines: (t) => [
+      `拍完「${t}」回看的时候，我突然想通一件事：人生里笑得最开心的那些瞬间，没有一个是计划好的`,
+      `很多人问我为什么老拍「${t}」这种搞笑内容——因为生活已经很苦了，能让你笑出声的事，一件都不该浪费`,
+    ],
+    climaxLines: (t) => [
+      `注意这里——（关键帧！）我当时表情完全失控了。但失控的那个表情，反而是整条视频最真实、最好笑的那张脸`,
+      `「${t}」的高潮来得毫无征兆——就像生活本身一样。你永远不知道下一秒自己会笑成什么样`,
+    ],
+  },
+  '健身': {
+    hookLines: (t,ref,pf) => [
+      `不做「${t}」的人永远不会知道的${Math.floor(Math.random()*3+3)}件事——`,
+      `关于「${t}」，教练收你几千块钱也不会告诉你的真相——`,
+      `我坚持「${t}」90天后——体重只变了1公斤。但我的生活全变了`,
+      `如果你也试过「${t}」然后放弃了——不是你的问题，是大家都踩的坑没人告诉你`,
+    ],
+    coreLines: (t) => [
+      `第一个动作最容易吃亏的地方：腰。很多人腰是松的，长期下来必受伤`,
+      `第二步的关键不在动作，在呼吸——发力吐气，还原吸气。呼吸对了，效果翻倍`,
+      `「${t}」最常见的误区：追求"越多越好"。真相是——质量远大于数量。一组标准的比十组糊的好`,
+      `很多人做「${t}」只看镜子——但你应该感受的是肌肉的发力感。看不见的变化才是真正的变化`,
+    ],
+    emotionLines: (t) => [
+      `坚持「${t}」第${Math.floor(Math.random()*20+10)}天。我第一次看到了变化——不只是身体线条变了，是那种"我可以掌控自己"的确定感，从身体里长出来了`,
+      `健身最难的从来不是动作——是出门前那五分钟的"算了今天不去了"。但每次「${t}」做完之后，我从来没后悔过`,
+    ],
+    climaxLines: (t) => [
+      `汗流到最后，脑子里什么都想不起来了。那个瞬间你突然发现：生活里所有让你焦虑的东西，在你身体真实的疲惫面前——全都变小了`,
+    ],
+  },
+  '旅行': {
+    hookLines: (t,ref,pf) => [
+      `这趟「${t}」我花了${Math.floor(Math.random()*400+300)}块——`,
+      `如果只有${Math.floor(Math.random()*2+2)}天走「${t}」，这份我走了${Math.floor(Math.random()*10+10)}趟才摸透的路线请收好`,
+      `「${t}」之前我看了无数攻略。到了之后发现——攻略全是错的`,
+      `「${t}」最值得的瞬间不在景点——在我走错路的那个下午`,
+    ],
+    coreLines: (t) => [
+      `第一站别从正门进。从侧面的小路进去，整条巷子几乎只有你一个人`,
+      `第二晚住的地方推开窗就是——（画面比语言更有说服力，直接展示）`,
+      `「${t}」最容易被坑的地方：交通。从一个点到另一个点，不要打网红推荐的——打当地人坐的`,
+      `「${t}」必吃的不是网红店——是菜市场旁边那家没有招牌但门口在排队的小摊`,
+    ],
+    emotionLines: (t) => [
+      `坐在巷子口啃完最后一口面包的那几分钟，我脑子里只冒出一句话：我们拼命赚钱、升职、买房——是不是就为了偶尔能有这样一个下午？`,
+      `「${t}」之后回来上班的第一个周一，我打开电脑坐了很久。不是因为不想工作——是因为我突然不确定"想过的那种生活"是什么了`,
+    ],
+    climaxLines: (t) => [
+      `离开那天我没有发朋友圈。因为那一刻的「${t}」，已经是我的了。不需要告诉任何人`,
+      `「${t}」的最后一个画面我删了——因为最好的那个瞬间，任何镜头都拍不下来`,
+    ],
+  },
+  '短剧': {
+    hookLines: (t,ref,pf) => [
+      `刷到第${Math.floor(Math.random()*20+10)}集「${t}」，我终于破译了它的套路——`,
+      `如果让我拍一部「${t}」题材的短剧，开场白是这句——`,
+      `「${t}」前三秒抓住你的不是剧情——是这句话`,
+      `当你用「${t}」打开你身边每个人的生活——会发现人人都是主角`,
+    ],
+    coreLines: (t) => [
+      `第一场：环境氛围拉满，主角出场的第一句台词就立住人设`,
+      `第二场的反转是整个剧的眼。前面所有看似无关的细节，在这一刻全部引爆`,
+      `「${t}」的节奏密码：每30秒一个"小钩子"，每60秒一个"大钩子"。没有钩子的短剧等于白拍`,
+      `很多人以为「${t}」就是"狗血"。错了——真正爆的短剧不是靠狗血，是靠"代入感"`,
+    ],
+    emotionLines: (t) => [
+      `短剧最迷人的地方：把一个人一生最戏剧化的那些瞬间，压缩到${Math.floor(Math.random()*5+5)}分钟。你在现实里不敢做的——短剧全替你做了`,
+      `拍「${t}」最打动我的一个细节：演员在两个版本之间选了"哭出来"的那版。她说——真实的情感不需要留白`,
+    ],
+    climaxLines: (t) => [
+      `最后一个镜头没有台词，只给了一个眼神。因为该说的全说了——说不该说的，也全说了`,
+      `「${t}」最后一幕——主角回头看了一眼，然后继续往前走。不是因为放下了——是因为必须走`,
+    ],
+  },
+  '体育': {
+    hookLines: (t,ref,pf) => [
+      `「${t}」这一球——`,
+      `如果错过了「${t}」这场比赛，${Math.floor(Math.random()*2+2)}分钟给你补全所有高光`,
+      `「${t}」最精彩的部分不在比分——在第${Math.floor(Math.random()*3+2)}节最后那${Math.floor(Math.random()*5+3)}秒`,
+    ],
+    coreLines: (t) => [
+      `关键回合慢放：注意这个启动的预判。在对手传球的0.3秒前，他已经读出了意图`,
+      `第二个名场面才是最体现水平的——不是技术，是经验熬出来的本能`,
+      `「${t}」这个回合的神来之笔——大部分人只看到结果，但我回放之后发现了更可怕的细节`,
+    ],
+    emotionLines: (t) => [
+      `体育最美也最残酷的地方：你付出全部训练，结果可能是零。但也因为这种不确定性——「${t}」的每一次胜利才弥足珍贵`,
+      `「${t}」结束后镜头给到了观众席——有人在哭。不是因为输了，是因为亲眼看着自己喜欢的人倾尽全力`,
+    ],
+    climaxLines: (t) => [
+      `终场哨响。全场炸了，而镜头里这个人只是安静跪在草地上——不是因为赢了。是因为这条路，太长了`,
+      `「${t}」的最后几秒暂停，教练没有画战术。他只说了一句——"你们这辈子可能就只有这一次"。然后他们上场了`,
+    ],
+  },
+};
+
+function pickFromPool(cat, poolKey, t, ref, pf) {
+  const pool = CAT_POOLS[cat];
+  if (!pool || !pool[poolKey]) return null;
+  const lines = pool[poolKey](t, ref, pf);
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
+function guessCat(topic) {
+  // 计分制：每个垂类有一组关键词+权重，按匹配总分决定
+  const catScores = {
+    '美食': { '美食':3,'吃':2,'饭':2,'菜':2,'甜品':3,'蛋糕':3,'饮':2,'食':2,'做饭':3,'下厨':3,'烹饪':3,'厨艺':3,'晚餐':2,'早餐':2,'午餐':2,'夜宵':3,'深夜':2,'探店':3,'米其林':3,'网红店':2,'火锅':3,'烤肉':3,'奶茶':2,'咖啡':2,'面包':2,'零食':2,'家的味道':3,'深夜食堂':3,'教程':1 },
+    '舞蹈': { '舞蹈':3,'舞':2,'跳':2,'编舞':3,'舞步':3,'街舞':3,'韩舞':3,'kpop':2,'K-POP':2,'翻跳':3,'练舞':3,'学舞':3,'舞感':2,'killing':3,'刀群舞':3,'即兴':2,'爵士':3,'芭蕾':3,'中国舞':3,'freestyle':3,'舞者':2,'舞台':2,'cover':2 },
+    '颜值': { '颜值':3,'妆容':3,'化妆':3,'妆':2,'仿妆':3,'素颜':3,'变美':3,'变':1,'美':1,'美容':3,'护肤':3,'化妆师':3,'底妆':3,'眼妆':3,'口红':3,'粉底':2,'遮瑕':2,'高光':2,'修容':2,'眉毛':2,'眼线':2,'睫毛':2,'腮红':2,'定妆':2,'卸妆':2,'教程':1 },'穿搭': { '穿搭':3,'穿':2,'搭配':3,'衣':2,'鞋':2,'包':2,'look':3,'OOTD':3,'造型':2,'时尚':3,'风格':2,'通勤':2,'约会':2,'叠穿':3,'基础款':3,'衣橱':3,'ootd':3,'fashion':3,'裤子':2,'裙子':2,'外套':2,'帽子':2,'配饰':2,'教程':1 },'舞蹈': { '舞蹈':3,'舞':2,'跳':2,'编舞':3,'舞步':3,'街舞':3,'韩舞':3,'kpop':2,'K-POP':2,'翻跳':3,'练舞':3,'学舞':3,'舞感':2,'killing':3,'刀群舞':3,'即兴':2,'爵士':3,'芭蕾':3,'中国舞':3,'freestyle':3,'舞者':2,'舞台':2,'cover':2,'教程':1 },
+    '穿搭': { '穿搭':3,'穿':2,'搭配':3,'衣':2,'鞋':2,'包':2,'look':3,'OOTD':3,'造型':2,'时尚':3,'风格':2,'通勤':2,'约会':2,'叠穿':3,'基础款':3,'衣橱':3,'ootd':3,'fashion':3,'裤子':2,'裙子':2,'外套':2,'帽子':2,'配饰':2 },
+    'Vlog': { 'Vlog':3,'vlog':3,'记录':2,'日常':2,'生活':2,'一天':2,'独居':2,'宅':2,'慢生活':3,'碎碎念':2,'流水账':2,'治愈系':2,'一人居':3,'随手拍':2,'plog':2 },
+    '旅行': { '旅行':3,'游':2,'旅':2,'城市':2,'酒店':2,'攻略':3,'景点':3,'风景':3,'旅途':2,'背包':3,'自驾':3,'穷游':3,'网红打卡':2,'民宿':3,'出国':2,'机票':2,'火车':2 },
+    '科技': { '科技':3,'AI':3,'手机':3,'App':2,'数码':3,'智能':3,'人工智能':3,'芯片':3,'IT':2,'程序':2,'代码':2,'软件':3,'硬件':3,'测评':2,'评测':2,'开箱':3,'数据':2 },
+    '情感': { '情感':3,'爱':2,'分手':3,'恋爱':3,'孤独':3,'治愈':2,'情绪':3,'焦虑':3,'抑郁':3,'原生家庭':3,'情感共鸣':3,'心灵鸡汤':2,'独白':2,'倾诉':2,'难过':2,'眼泪':2,'崩溃':2,'安慰':2 },
+    '搞笑': { '搞笑':3,'笑':2,'离谱':3,'整活':3,'社死':3,'名场面':3,'沙雕':3,'段子':3,'梗':2,'神操作':3,'翻车':3,'迷惑':2,'鬼畜':2,'笑到':3,'哈哈哈哈':3 },
+    '健身': { '健身':3,'运动':2,'练':2,'瘦':2,'腹肌':3,'减肥':3,'增肌':3,'减脂':3,'塑形':3,'瑜伽':3,'普拉提':3,'跑步':2,'撸铁':3,'私教':2,'汗水':2,'坚持':1,'变强':2,'力量':2 },
+    '短剧': { '短剧':3,'剧':2,'剧情':3,'演':2,'反转':3,'戏':2,'短片':3,'微电影':3,'情景剧':3,'小剧场':3,'剧本':3,'演员':2,'对手戏':2,'飙戏':3,'剧情短片':3,'编剧':2,'冲突':2 },
+    '体育': { '体育':3,'球':2,'赛':3,'世界杯':3,'NBA':3,'足球':3,'篮球':3,'网球':2,'赛车':2,'跑步':2,'马拉松':3,'比赛':2,'决赛':3,'冠军':3,'最后':1,'绝杀':3,'逆转':3,'高光':2,'赛季':2 },
+  };
+
+  let bestCat = 'Vlog', bestScore = 0;
+  for (const [cat, keywords] of Object.entries(catScores)) {
+    let score = 0;
+    for (const [kw, w] of Object.entries(keywords)) {
+      if (topic.includes(kw)) score += w;
+    }
+    if (score > bestScore) { bestScore = score; bestCat = cat; }
+  }
+
+  // 置信度过低时，根据话题长度和用词做二次推断
+  if (bestScore <= 1 && topic.length > 2) {
+    if (/教程|教学|步骤|入门|新手|攻略|方法|技巧/.test(topic)) {
+      if (topic.includes('妆') || topic.includes('美') || topic.includes('护肤')) bestCat = '颜值';
+      else if (topic.includes('舞') || topic.includes('跳')) bestCat = '舞蹈';
+      else if (topic.includes('菜') || topic.includes('吃') || topic.includes('饭')) bestCat = '美食';
+      else if (topic.includes('穿') || topic.includes('搭') || topic.includes('衣')) bestCat = '穿搭';
+      else if (topic.includes('练') || topic.includes('瘦') || topic.includes('运动')) bestCat = '健身';
+    }
+  }
+
+  return bestCat;
+}
+
+// ============================================================
+//  RENDER TOPIC CARDS（含爆款标题+大纲+拍摄方向）
+// ============================================================
+function renderTopicCards(topics, platform, duration) {
+  const container = document.getElementById('topics-container');
+  container.innerHTML = `<div class="topic-list">` + topics.map((t, i) => {
+    if (t.isAiRoute) {
+      // AI 深度创作路由卡片
+      return `
+      <div class="topic-card ai-route-card" id="titem-${i}">
+        <div style="text-align:center;padding:10px 0;">
+          <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+          <div class="topic-title" style="font-size:17px;text-align:center;color:#8B5CF6;">${t.title}</div>
+          <div class="topic-reason" style="text-align:center;">${t.reason}</div>
+        </div>
+        ${(t.titles || []).length ? `
+        <div class="title-options" style="opacity:0.6;">
+          <div class="title-options-header">📌 参考方向（AI 将为你深度定制）</div>
+          ${t.titles.map((tt, j) => `<div class="title-option">${j+1}. ${tt}</div>`).join('')}
+        </div>` : ''}
+        <div class="topic-outline">
+          <div class="topic-outline-title">⚠️ 模板无法精确理解你的想法</div>
+          <div class="topic-outline-list">
+            ${(t.outline || []).map(o => `<li>${o}</li>`).join('')}
+            <li style="color:#8B5CF6;font-weight:600;">📋 ${(t.shootDir || [])[0] || ''}</li>
+          </div>
+        </div>
+        <div style="text-align:center;margin:14px 0;">
+          <button class="cbtn" style="background:linear-gradient(135deg,#8B5CF6,#6366F1);color:#fff;font-size:14px;padding:10px 28px;border:none;border-radius:10px;cursor:pointer;" onclick="event.stopPropagation();sendAiRoutePrompt()">
+            📤 发送给 WorkBuddy 做深度选题分析
+          </button>
+        </div>
+        <div class="topic-tags">
+          ${(t.tags || []).map(tag => `<span class="ttag">${tag}</span>`).join('')}
+        </div>
+      </div>`;
+    }
+    // 普通模板选题卡片
+    return `
+    <div class="topic-card" id="titem-${i}" onclick="selectTopic(${i})">
+      <div class="topic-top">
+        <div class="topic-left">
+          <div class="topic-num">${String(i+1).padStart(2,'0')}</div>
+          <div class="topic-main">
+            <div class="topic-title">${t.title}</div>
+            <div class="topic-reason">${t.reason}</div>
+          </div>
+        </div>
+        <div class="topic-actions">
+          <button class="cbtn primary" onclick="event.stopPropagation();confirmTopic(${i})">选这个 ✅</button>
+        </div>
+      </div>
+      <div class="title-options">
+        <div class="title-options-header">📌 爆款标题参考（选一个或融合）</div>
+        ${(t.titles || []).map((tt, j) => `<div class="title-option">${j+1}. ${tt} ${j===0 ? '<span class="hot-badge">推荐</span>' : ''}</div>`).join('')}
+      </div>
+      <div class="topic-outline">
+        <div class="topic-outline-title">📋 内容大纲</div>
+        <div class="topic-outline-list">
+          ${(t.outline || []).map(o => `<li>${o}</li>`).join('')}
+        </div>
+      </div>
+      <div class="topic-shoot">
+        <div class="topic-shoot-title">🎥 拍摄方向建议（${platform}）</div>
+        <div class="topic-shoot-list">
+          ${(t.shootDir || []).map(d => `• ${d}`).join('<br>')}
+        </div>
+      </div>
+      <div class="topic-tags">
+        ${(t.tags || []).map(tag => `<span class="ttag">${tag}</span>`).join('')}
+        <span class="ttag" style="background:#E6F1FB;color:#185FA5;">${platform}</span>
+        <span class="ttag" style="background:#EEEDFE;color:#3C3489;">${duration}</span>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function selectTopic(i) {
+  document.querySelectorAll('.topic-card').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('titem-' + i);
+  if (el) el.classList.add('selected');
+  selectedTopic = generatedTopics[i];
+  document.getElementById('selected-topic-name').textContent = generatedTopics[i].title;
+  document.getElementById('topic-action-bar').style.display = 'flex';
+}
+
+function confirmTopic(i) {
+  selectTopic(i);
+  // 同步到脚本车间
+  const topicEl = document.getElementById('script-topic');
+  topicEl.textContent = generatedTopics[i].title;
+  topicEl.classList.remove('empty');
+  buildRefList();
+}
+
+function goToScript() {
+  if (!selectedTopic) { alert('请先选择一个选题！'); return; }
+  const topicEl = document.getElementById('script-topic');
+  topicEl.textContent = selectedTopic.title;
+  topicEl.classList.remove('empty');
+  buildRefList();
+  switchTab('script', document.querySelectorAll('.tab-btn')[2]);
+}
+
+function sendAiRoutePrompt() {
+  const idea = document.getElementById('topic-idea').value.trim();
+  const cat = document.getElementById('topic-cat').value;
+  const platform = document.getElementById('topic-platform').value;
+  const duration = document.getElementById('topic-duration').value;
+  const prompt = `【AI 深度选题分析】
+
+我在爆款生成器中输入了一个自定义想法，但模板系统无法精确理解。请帮我做深度选题分析：
+
+📌 我的想法：「${idea}」
+📂 我选的垂类：${cat}
+📱 目标平台：${platform}
+⏱ 视频时长：${duration}
+
+请做以下事情：
+1. 先理解「${idea}」到底是什么意思、目标受众是谁
+2. 搜索 ${cat === '全部' || cat === '融合垂类' ? '各垂类' : cat + '垂类'} 在 ${platform} 上的近期热点趋势
+3. 生成 5 个具体的爆款选题方向，每个包含：
+   - 3 个备选爆款标题（不同角度）
+   - 内容大纲（4 段结构）
+   - 拍摄方向建议（${platform}平台特性）
+4. 如果有同类型爆款案例，请附上参考链接和分析`;
+  
+  navigator.clipboard.writeText(prompt).then(() => {
+    showModal(
+      '🤖',
+      '深度选题分析提示词已就绪',
+      `包含「${idea}」的完整上下文已复制到剪贴板<br><br>
+      <b>请返回对话窗口，Ctrl+V 粘贴并发送给我</b><br><br>
+      <span style="background:#fef3c7;padding:4px 12px;border-radius:6px;font-size:12px;">
+        我会搜索各平台真实热点，深入分析你的想法，<br>然后给出 5 个真正有价值的爆款选题
+      </span>`
+    );
+  });
+}
+
+function showModal(icon, title, body) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:32px;max-width:520px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="font-size:48px;margin-bottom:12px;">${icon}</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px;">${title}</div>
+    <div style="font-size:14px;color:#555;margin-bottom:20px;line-height:1.8;">${body}</div>
+    <button onclick="this.closest('div').parentElement.remove()" style="padding:10px 28px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:14px;">关闭</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+// ============================================================
+//  SCRIPT WORKSHOP
+// ============================================================
+function setMode(el) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentMode = el.dataset.mode;
+  document.getElementById('ref-panel').style.display = (currentMode === 'original') ? 'none' : 'block';
+}
+
+function buildRefList() {
+  const list = document.getElementById('ref-list');
+  // 显示热度最高的8个热点作为参考
+  const items = [...TREND_DATA].sort((a,b) => b.heat - a.heat).slice(0, 8);
+  list.innerHTML = items.map((t, i) => `
+    <div class="ref-item" id="ref-${i}" onclick="selectRef(${i}, ${t.id})">
+      <strong>${t.title}</strong><br><span style="font-size:11px;color:#aaa;">${t.platform} · ${t.cat} · ${t.heat}°</span>
+    </div>
+  `).join('');
+}
+
+function selectRef(i, id) {
+  document.querySelectorAll('.ref-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('ref-' + i);
+  if (el) el.classList.add('selected');
+  selectedRefIdx = id;
+}
+
+// ============================================================
+//  SCRIPT GENERATION: 专业分镜脚本
+// ============================================================
+function generateScript() {
+  let topic = '';
+  const customInput = document.getElementById('custom-topic-input');
+  if (customInput && customInput.value.trim()) {
+    topic = customInput.value.trim();
+  } else {
+    const topicEl = document.getElementById('script-topic');
+    topic = (topicEl?.textContent || '').trim();
+  }
+  if (!topic || topic.includes('尚未') || topic.includes('空')) { 
+    alert('请先在左侧「✏️ 自定义创作」中输入你的选题想法，或先在选题工厂选择一个选题！'); 
+    return; 
+  }
+
+  const duration = document.getElementById('script-duration')?.value || '30秒';
+  const style = document.getElementById('script-style')?.value || '快节奏卡点';
+  const ref = (currentMode !== 'original' && selectedRefIdx >= 0)
+    ? TREND_DATA.find(t => t.id === selectedRefIdx) : null;
+
+  const output = document.getElementById('script-output');
+  if (!output) { alert('页面渲染异常，请刷新后重试'); return; }
+  output.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">正在分析热点结构、生成专业分镜...</p></div>';
+
+  setTimeout(() => {
+    try {
+      const scenes = buildScenes(topic, duration, style, ref, currentMode);
+      if (!scenes || !scenes.length) throw new Error('脚本生成返回空结果');
+
+      const refBadge = ref ? `<span style="font-size:12px;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:8px;margin-left:8px;">参考：${ref.title}</span>` : '';
+      const modeLabel = { original:'纯原创', ref:'仿写模式', mix:'融合创作' }[currentMode] || '';
+
+      const stEl = document.getElementById('script-title');
+      if (stEl) stEl.textContent = '分镜脚本';
+      const smEl = document.getElementById('script-meta');
+      if (smEl) smEl.innerHTML = `<span style="background:#f0efe9;padding:2px 8px;border-radius:6px;">${topic}</span> ${refBadge}`;
+
+      let html = `<div class="sw-body">`;
+      if (ref && currentMode !== 'original') {
+        html += `
+          <div class="analysis-box">
+            <div class="analysis-title">📊 爆款参考分析：${ref.title}</div>
+            <div class="analysis-text">
+              <b>平台：</b>${ref.platform} &nbsp;|&nbsp; <b>热度：</b>${ref.heat}°<br>
+              <b>爆款逻辑：</b>${ref.reason}<br>
+              <b>仿写策略：</b>提取其「${(ref.desc||'').substring(0,30)}...」的核心吸引点，融合到本次脚本的开头钩子和情绪节奏中
+            </div>
+          </div>`;
+      }
+      html += `<div style="margin-bottom:14px;padding:10px 14px;background:#f8f7f3;border-radius:9px;">
+        <span style="font-size:13px;font-weight:600;">「${topic}」</span>
+        <span style="font-size:12px;color:#888;margin-left:8px;">${duration} · ${modeLabel} · ${style}</span>
+      </div>`;
+
+      scenes.forEach((s, i) => {
+        html += `
+          <div class="scene-card" id="scene-${i}">
+            <div class="scene-header">
+              <div class="scene-label">镜头 ${i+1} · ${s.label || '内容'}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="scene-time">${s.time || ''}</span>
+                <button class="btn-sm" style="font-size:11px;padding:3px 9px;" onclick="regenOne(${i})">🔄 重新生成此镜</button>
+              </div>
+            </div>
+            <div class="scene-body">
+              <div class="scene-row"><span class="scene-key">景别</span><span class="scene-val">${s.shot || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">运镜</span><span class="scene-val">${s.camera || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">台词/旁白</span><span class="scene-val highlight">${s.vocal || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">画面内容</span><span class="scene-val">${s.visual || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">情绪/节奏</span><span class="scene-val" style="color:#8e44ad;">${s.emotion || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">音效/BGM</span><span class="scene-val" style="color:#185FA5;">${s.audio || '-'}</span></div>
+              <div class="scene-row"><span class="scene-key">字幕建议</span><span class="scene-val" style="font-size:12px;color:#888;">${s.subtitle || '-'}</span></div>
+              ${s.refNote ? `<div class="scene-row"><span class="scene-key">参考</span><span class="scene-val ref">${s.refNote}</span></div>` : ''}
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
+      output.innerHTML = html;
+      const cb = document.getElementById('copy-btn');
+      if (cb) cb.style.display = 'inline-block';
+      // 提示：可用 AI 深度创作获得更精细版本
+      output.innerHTML += `
+        <div style="margin-top:16px;padding:14px 16px;background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-radius:12px;border:1.5px dashed #c4b5fd;text-align:center;">
+          <div style="font-size:14px;color:#6d28d9;font-weight:600;margin-bottom:6px;">✨ 想要逐句精细打磨的脚本？</div>
+          <div style="font-size:12px;color:#7c3aed;margin-bottom:10px;">点击上方 <b>「🤖 AI深度创作」</b> 按钮，多阶段调用 AI 模型生成逐句台词、分镜细节、钩子分析和违禁词检查</div>
+          <span style="font-size:11px;color:#a78bfa;">配置 API Key 后直接生成，无需复制粘贴</span>
+        </div>`;
+    } catch (e) {
+      output.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);">
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">脚本生成出错</div>
+        <div style="font-size:13px;color:#888;margin-bottom:16px;">${e.message || '未知错误，请尝试重新选择选题后再生成'}</div>
+        <button class="btn-sm" onclick="generateScript()">🔄 重新生成</button>
+      </div>`;
+    }
+  }, 800);
+}
+
+
+// ============================================================
+//  BUILD SCENES: 专业分镜生成
+// ============================================================
+function parseDuration(durStr) {
+  // 精确匹配用户选择的时长选项，返回 [总秒数, 镜头数]
+  // "15秒（2-3镜）" / "30-60秒（5-7镜）" / "1-3分钟（8-12镜）" / "3分钟+（15镜+）"
+  const d = durStr || '';
+  if (d.includes('15秒')) return [15, 3];
+  if (d.includes('30') || d.includes('60秒')) return [45, 6];
+  if (d.includes('1-3分钟') || d.includes('1-3分')) return [120, 10];
+  if (d.includes('3分钟') || d.includes('3分')) return [180, 15];
+  // fallback: 按关键词
+  if (d.includes('15')) return [15, 3];
+  if (d.includes('30')) return [30, 6];
+  if (d.includes('60')) return [60, 8];
+  if (d.includes('1')) return [60, 8];
+  if (d.includes('3')) return [180, 15];
+  return [60, 8];
+}
+
+// 不同镜头数的权重分布（保证每个镜头都有合理的时间占比）
+const SCENE_WEIGHTS = {
+  3:  [0.15, 0.45, 0.40],
+  4:  [0.15, 0.25, 0.30, 0.30],
+  5:  [0.10, 0.20, 0.25, 0.25, 0.20],
+  6:  [0.08, 0.12, 0.20, 0.20, 0.20, 0.20],
+  7:  [0.08, 0.12, 0.17, 0.17, 0.17, 0.15, 0.14],
+  8:  [0.08, 0.12, 0.15, 0.15, 0.15, 0.12, 0.12, 0.11],
+  9:  [0.06, 0.10, 0.14, 0.14, 0.14, 0.12, 0.10, 0.10, 0.10],
+  10: [0.05, 0.08, 0.12, 0.12, 0.12, 0.12, 0.11, 0.10, 0.09, 0.09],
+  11: [0.05, 0.07, 0.11, 0.11, 0.11, 0.11, 0.10, 0.09, 0.09, 0.08, 0.08],
+  12: [0.05, 0.07, 0.10, 0.10, 0.10, 0.10, 0.10, 0.09, 0.08, 0.07, 0.07, 0.07],
+  13: [0.04, 0.06, 0.09, 0.09, 0.09, 0.09, 0.09, 0.08, 0.08, 0.08, 0.07, 0.07, 0.07],
+  14: [0.04, 0.06, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.07, 0.07, 0.07, 0.07, 0.06],
+  15: [0.03, 0.05, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05],
+};
+
+function buildScenes(topic, duration, style, ref, mode) {
+  // 严格按时长参数解析
+  const [totalSec, nScenes] = parseDuration(duration);
+  const cat = guessCat(topic);
+  const pf = ref ? ref.platform : (document.getElementById('script-platform')?.value || '抖音');
+
+  // 用参考热点的实际内容约束仿写
+  let refHook = '', refCore = '', refEmotion = '';
+  if (mode !== 'original' && ref) {
+    refHook = ref.reason || '';
+    refCore = ref.desc || '';
+    refEmotion = ref.title || '';
+  }
+
+  // 镜头时间分布（按权重精确分配 totalSec 到 nScenes 个镜头）
+  function sceneTime(i) {
+    const weights = SCENE_WEIGHTS[nScenes] || SCENE_WEIGHTS[8];
+    const sum = weights.reduce((a,b)=>a+b,0);
+    const norm = weights.map(x => x/sum);
+    let start = 0;
+    for (let j=0; j<i; j++) start += norm[j] * totalSec;
+    const end = start + norm[i] * totalSec;
+    return `${Math.round(start)}-${Math.round(end)}s`;
+  }
+
+  // 镜头阶段映射（确保内容结构完整：hook→铺垫→核心→情感→高潮→CTA）
+  function sceneRole(i, total) {
+    if (total <= 3) return i===0 ? 'hook' : i===total-1 ? 'cta' : 'core';
+    // 长脚本：hook(0), setup(1), 多段core, emotion(~65%), climax(倒数第二), cta(最后)
+    if (i === 0) return 'hook';
+    if (i === 1) return 'setup';
+    if (i === total-1) return 'cta';
+    if (i === total-2) return 'climax';
+    const ratio = i / total;
+    if (total > 10 && (ratio >= 0.55 && ratio <= 0.70)) return 'emotion';
+    if (total <= 10 && i === Math.floor(total * 0.65)) return 'emotion';
+    return 'core';
+  }
+
+  // 爆款钩子结构分析
+  function analyzeRefHook(ref) {
+    if (!ref) return '';
+    const d = ref.desc || '';
+    const r = ref.reason || '';
+    if (d.includes('反转')) return '反转钩子：先建立预期，再打破预期，制造认知落差';
+    if (d.includes('ASMR') || d.includes('切菜声')) return '感官钩子：前3秒不靠台词，靠极致的声音/画面刺激留住观众';
+    if (d.includes('POV') || d.includes('视角')) return '视角钩子：用第二人称让观众产生强烈代入感';
+    if (d.includes('挑战') || d.includes('变身')) return '挑战钩子：用「我也能做到」的暗示激发参与欲';
+    if (d.includes('共') || d.includes('情感')) return '情感钩子：前3秒用一句话击中特定人群的心理痛点';
+    if (d.includes('反差') || d.includes('对比')) return '反差钩子：制造「普通vs惊艳」的视觉对比，让观众下意识期待结果';
+    return r.substring(0,30) + '...';
+  }
+
+  const refStyleNote = (mode !== 'original' && ref) ? analyzeRefHook(ref) : '';
+
+  // 生成每个镜头
+  let scenes = [];
+  const total = nScenes;
+  let coreCounter = 0;  // 核心镜头计数器，确保台词不重复
+
+  for (let i = 0; i < total; i++) {
+    const role = sceneRole(i, total);
+    const timeLabel = sceneTime(i);
+
+    let shotType, camera, vocal, visual, emotion, audio, subtitle, label, refNote = '';
+
+    // ========== HOOK ==========
+    if (role === 'hook') {
+      label = '开头钩子';
+      shotType = '特写/大特写';
+      camera = '固定镜头或极慢推镜（0.3x速）';
+      visual = '正脸直视镜头，表情有张力（震惊/神秘/温暖），背景极简虚化，光线聚焦面部';
+      emotion = '⚡ 0.5秒内抓住注意力，制造强烈悬念或好奇心缺口';
+      audio = '配合表情的卡点音效（叮/boom）→ 悬念型BGM前奏立即进入';
+      subtitle = '全屏大字（不超过8个字），与台词第一句同步弹出';
+      const hookFromPool = pickFromPool(cat, 'hookLines', topic, ref, pf);
+      if (mode === 'ref' && ref) {
+        vocal = `【仿${ref.platform}「${ref.title}」结构】${hookFromPool || ref.desc.substring(0,50)}`;
+        refNote = `仿写策略：${refStyleNote}`;
+      } else if (mode === 'mix' && ref) {
+        vocal = hookFromPool || `看了${ref.title}之后，我终于明白了「${topic}」的真正打开方式——`;
+      } else {
+        vocal = hookFromPool || `关于「${topic}」——这条视频可能改变你对它的全部认知`;
+      }
+    }
+
+    // ========== SETUP (context/problem) ==========
+    else if (role === 'setup') {
+      label = '冲突建立';
+      shotType = mode === 'ref' && ref ? '同参考视频景别' : '中景';
+      camera = '快速切镜或分屏，制造视觉对比';
+      visual = '分屏或前后场景切换：呈现「常见误解 vs 真实情况」或「问题场景 → 即将揭晓答案」';
+      emotion = '📈 节奏明显加快，信息密度上升，建立「我等不及要知道」预期';
+      audio = 'BGM正式进入主旋律，关键切换点配转折音效';
+      subtitle = '关键词弹幕式弹出（每个关键词单独出现，停留0.3-0.5s）';
+      if (mode === 'ref' && ref) {
+        vocal = `大部分人看到「${ref.title}」的时候只注意到XXX，但真正让它爆的不是那个——而是后面${Math.floor(Math.random()*3+3)}秒里发生的事`;
+        refNote = `参照「${ref.title}」的结构节奏：${ref.desc.substring(0,40)}`;
+      } else {
+        vocal = `关于「${topic}」，99%的人都只看到了表面。但如果你愿意给我${Math.round(totalSec*0.6)}秒——`;
+      }
+    }
+
+    // ========== CORE CONTENT (多阶段渐进式) ==========
+    else if (role === 'core') {
+      const coreIdx = coreCounter++;
+      const totalCore = total - 4; // 减去 hook/setup/climax/cta 四个固定镜头
+      label = `核心内容${coreIdx+1}`;
+      
+      // 多维度视觉指令
+      const visualTypes = [
+        '实操/演示画面，手指/工具指向关键步骤，慢动作展示', // 演示
+        '对比画面：左半屏错误做法 vs 右半屏正确做法，标注差异', // 对比
+        '产品/道具特写，转盘旋转展示，灯光聚焦', // 展示
+        '第一人称视角（POV），让观众完全带入操作者视角', // POV
+        '分屏并排：不同参数/条件下的3种效果对比', // 并列对比
+        '字幕+图标动画配合画面，信息图风格', // 信息图
+        '手持跟拍，现场真实感，轻微晃动增加临场', // 纪实
+        '俯拍桌面，极简白底，产品/内容居中，杂志级构图', // 俯拍
+        '慢动作回放关键瞬间，画面加柔焦效果', // 慢动作
+        '快速蒙太奇剪辑：3-5个短画面快速闪过，配鼓点', // 蒙太奇
+        '定格画面→画圈标注→放大细节', // 分析
+        '从近景缓缓拉至中景，展现完整场景', // 拉远
+        '侧面45度角拍摄，展示侧面轮廓和姿态', // 侧面
+        '镜子/反光面反射拍摄，营造偷窥感/客观视角', // 反射
+        '贴地仰拍/高空俯拍，非常规角度制造视觉冲击', // 非常规
+      ];
+      const cameraTypes = [
+        '手持轻微晃动 + 缓慢推进（推镜）', '固定三角架，平滑横摇', '手持跟随，呼吸感',
+        '快速横摇切换主体', '稳定器平滑前推', '静态固定 + 焦点切换',
+        '轻微上下浮动（呼吸镜头）', '360度环绕运镜', '快速下拉/上推（whip pan）',
+        '从模糊到清晰的变焦', '慢速侧移（dolly side）', '手持微抖+呼吸感',
+        '急速推近+定格', '俯瞰旋转', '稳定器后退跟拍',
+      ];
+      const emotionTypes = [
+        '🎯 建立认知：观众意识到"原来如此"', '📊 信息展开：层层递进，逻辑自洽',
+        '✨ 过渡铺垫：为下一阶段做情绪准备', '🔍 好奇驱动：制造"然后呢？"的期待',
+        '😮 惊叹时刻：出人意料的细节或对比', '🤔 思考共鸣：引发观众自己的反思',
+        '💡 恍然大悟：揭露被忽视的真相', '😌 舒适放松：慢节奏，享受过程',
+        '🔥 渐入佳境：信息密度逐渐升高', '👀 目不转睛：视觉冲击力最大化',
+        '💪 信心建立：观众觉得自己也能做到', '🤝 亲近感：博主与观众距离拉近',
+        '😄 轻松愉悦：幽默化解紧张', '🎨 审美享受：纯粹的画面美感',
+        '📖 叙事展开：故事的中间章节',
+      ];
+
+      shotType = visualTypes[coreIdx % visualTypes.length];
+      camera = cameraTypes[coreIdx % cameraTypes.length];
+      emotion = emotionTypes[coreIdx % emotionTypes.length];
+      visual = shotType; // visual 与 shotType 一致
+      audio = coreIdx % 3 === 0 ? 'BGM轻柔铺垫 + 关键动作同步音效' 
+            : coreIdx % 3 === 1 ? 'BGM节奏微升 + 画面切换处加轻鼓点'
+            : '环境音为主 + BGM远处低音量播放';
+      subtitle = coreIdx === 0 ? '「关键步骤」大字弹出，停留2s后缩小至角落'
+               : coreIdx === totalCore - 1 ? '「即将揭晓」闪烁提示，制造期待'
+               : `「第${coreIdx+1}步」图文标签 + 关键数据高亮`;
+
+      // 台词：优先从垂类池按序取，池耗尽后用智能生成
+      const pool = CAT_POOLS[cat];
+      if (pool && pool.coreLines) {
+        const lines = pool.coreLines(topic);
+        if (coreIdx < lines.length) {
+          vocal = lines[coreIdx];
+        } else {
+          // 池子耗尽，用智能 fallback 生成带上下文的台词
+          vocal = generateCoreFallback(cat, topic, coreIdx, totalCore, ref, mode);
+        }
+      } else {
+        vocal = generateCoreFallback(cat, topic, coreIdx, totalCore, ref, mode);
+      }
+    }
+
+    // ========== EMOTION PIVOT ==========
+    else if (role === 'emotion') {
+      label = '情感共鸣';
+      shotType = '近景→缓慢拉至中远景';
+      camera = '缓慢拉远（dolly out），速度0.5x，制造抽离感和思考空间';
+      visual = '从特写内容过渡到博主正脸或生活化场景——温暖的灯光、窗外城市夜景、或博主静静看着镜头的笑容';
+      emotion = '💫 节奏明显放缓，留白增多，给观众消化和共鸣的空间';
+      audio = 'BGM切为钢琴/吉他独奏，音量大但温暖，配轻微环境音（雨声/城市远处车声/厨房咕嘟声）';
+      subtitle = '金句式字幕——黑色背景+白色大字，居中淡入，停留2-3秒后淡出';
+      const emoFromPool = pickFromPool(cat, 'emotionLines', topic);
+      vocal = emoFromPool || `关于「${topic}」，有人问过我一个问题——你为什么要做这个？我的回答是——`;
+    }
+
+    // ========== CLIMAX ==========
+    else if (role === 'climax') {
+      label = '高潮/爆点';
+      shotType = '全景→特写→全景，高频率切换';
+      camera = '快速剪辑，0.3-0.5s一刀，配合BGM鼓点精准卡拍';
+      visual = '慢动作成品展示→快速回切制作过程高光瞬间→最终成品镜头（加柔光滤镜），屏幕蒙上极轻微暖色渐变';
+      emotion = '🔥 情绪峰值——视觉+听觉+文字信息量同时到达顶点，制造「忍不住想分享」的冲动';
+      audio = 'BGM切至副歌高潮段，音量推到最大但仍不刺耳，关键画面配鼓点音效';
+      subtitle = '全屏大字（颜色：暖金色/粉色）+ 副标题小字解释，停留2s后随画面消失';
+      const climaxFromPool = pickFromPool(cat, 'climaxLines', topic);
+      vocal = climaxFromPool || `就是这一刻——当「${topic}」真正完成的时候，我盯着它看了${Math.floor(Math.random()*5+5)}秒。不是因为多好看——是因为我终于做到了`;
+      if (mode !== 'original' && ref) {
+        refNote = `高潮结构参考「${ref.title}」：${ref.desc.substring(0,50)}...`;
+      }
+    }
+
+    // ========== CTA ==========
+    else if (role === 'cta') {
+      label = '结尾行动号召';
+      shotType = '中景，正脸';
+      camera = '轻微左右摇镜（幅度不超过5度），自然呼吸感';
+      // 根据平台+垂类动态调整CTA话术，绝不再硬编码
+      const ctaByCat = {
+        '美食': { '抖音':'如果今晚你也想试试——先点赞收藏，评论区告诉我你最想在深夜做给自己吃的一道菜是什么？我会在评论区抽一个人，下周直接拍你的选题', '小红书':'你们做过什么深夜疗愈自己的美食？评论区交出来，我一条条看。关注我，下次深夜见', 'YouTube':'喜欢这个美食系列的话，记得订阅并打开小铃铛。下一期想看什么菜，评论区见', default:'做出这道菜的时候你想到了谁？评论区告诉我，下期就做你点的那道菜' },
+        '舞蹈': { '抖音':'这支舞你学废了吗？评论区@你的舞蹈搭子，一起交作业！点赞过万我出分解教学', '小红书':'还有哪支舞想学分解教学的？评论区点名，我一条条安排。关注我不走丢', 'YouTube':'还想看哪支舞的教程？在评论区告诉我，下期见！记得订阅打开小铃铛', default:'还想学哪支舞？评论区点名，下期安排！' },
+        '颜值': { '抖音':'还想看什么妆容/变美教程？评论区告诉我，我专门为你拍一期！点赞收藏别迷路', '小红书':'下一期想看什么妆容？评论区点名！关注我，变美路上的每一步我都陪你走', 'YouTube':'想看什么妆容教程？评论告诉我。喜欢的话请订阅，每周更新变美干货', default:'还想看什么妆容？评论区告诉我，为你量身定制下一期' },
+        '穿搭': { '抖音':'这套穿搭你打几分？评论区告诉我你下周想看的风格，我直接搭给你看！', '小红书':'评论区告诉我你下周想穿什么风格？关注我，一起把衣柜穿出花', 'YouTube':'下一期想看什么穿搭风格？评论区见！记得订阅和小铃铛', default:'下周想看我搭什么风格？评论区告诉我' },
+        'Vlog': { '抖音':'你的日常Vlog拍了什么？评论区@我，我去看！点赞收藏，下期继续', '小红书':'你们最近在记录什么？评论区分享给我，我们一起认真生活。关注不迷路', 'YouTube':'你的生活有什么有趣的事？评论区聊聊。订阅我，一起记录生活', default:'你的日常是什么样的？评论区聊聊，下期见' },
+        '科技': { '抖音':'你还想让哪些科技产品被实测？评论区告诉我，我专门买来测给你看！', '小红书':'还有哪些数码产品你想看实测？评论区点名，关注我别错过', 'YouTube':'想看什么深度测评？评论区告诉我。订阅并打开小铃铛，每周更新', default:'还想测什么？评论区告诉我' },
+        '情感': { '抖音':'你也有过这种感受吗？评论区聊聊，我会一条条看的。你不是一个人', '小红书':'把你想说却一直没说的话写在评论区吧。关注我，一起走过那些不容易的日子', 'YouTube':'你也有过类似的经历吗？评论区分享你的故事。记得订阅', default:'你也有过这种感觉吗？评论区聊聊' },
+        '搞笑': { '抖音':'你遇到过比这还离谱的事吗？评论区笑给我看！点赞让更多人进来笑', '小红书':'你们还有哪些社死名场面？评论区交出来让大家开心一下！关注我收获更多快乐', 'YouTube':'你也有好笑的素材吗？评论区分享！订阅我，每周更新快乐', default:'你遇到过更离谱的吗？评论区笑出来' },
+        '健身': { '抖音':'练完的感觉怎么样？评论区打卡！一起坚持的评论区扣1，组队互相监督', '小红书':'你坚持多久了？评论区分享你的变化！关注我，一起变强', 'YouTube':'你坚持健身多久了？评论区分享你的变化。订阅我，每周更新', default:'练完什么感觉？评论区打卡' },
+        '旅行': { '抖音':'你在旅途中遇到过最难忘的事是什么？评论区分享！点赞收藏，下期继续出发', '小红书':'你也去过这个城市吗？评论区分享你的私藏路线！关注我，带你看不一样的世界', 'YouTube':'你的旅途中有哪些难忘的故事？评论区分享。订阅并打开小铃铛，下期见', default:'你去过最难忘的地方是哪里？评论区分享' },
+        '短剧': { '抖音':'这个结局你猜到了吗？评论区告诉我你心中的完美结局！点赞追更下一集', '小红书':'你想让这个故事怎么发展？评论区告诉我！关注我追更，下一集马上来', 'YouTube':'你希望下一集发生什么？评论区告诉我。订阅追更，不见不散', default:'你想看到什么结局？评论区告诉我' },
+        '体育': { '抖音':'这个操作你服不服？评论区给我打分！点赞让更多人看到这个名场面', '小红书':'这球你给几分？评论区说说你的看法！关注我，更多比赛解析在路上', 'YouTube':'你觉得这个回合谁最carry？评论区讨论。订阅并打开小铃铛', default:'这波操作你打几分？评论区见' },
+      };
+      const ctaMap = ctaByCat[cat] || ctaByCat['Vlog'];
+      let ctaText = (ctaMap[pf] || ctaMap['default']) + '';
+      // 把代词替换成具体主题
+      ctaText = ctaText.replace('这道菜', '「' + topic.substring(0,8) + '」');
+      vocal = ctaText;
+      // 根据垂类定制收尾画面和情绪
+      const ctaVisual = { '美食': '博主夹起食物对镜头一笑→画面渐暗出现下期预告文字', '舞蹈': '最后一帧定格在好看的动作→画面左侧弹出下一支舞的投票选项', '颜值': '正脸自信wink→画面转为滤镜对比图展示→引导关注', '穿搭': '全身转圈展示→画面定格→弹出"下周风格投票"', 'Vlog': '放下相机看向窗外→画面渐暗→弹出"你最近在记录什么"', '科技': '放下产品看向镜头→画面弹出"下期测什么"评论投票', '情感': '泪水或微笑定格→黑屏+白字"你也有过吗"→评论区引导箭头', '搞笑': '表情包式回眸→画面冻结+字幕"评论区笑给我看"', '健身': '汗水特写→全景展示成果→字幕"评论区打卡"弹出', '旅行': '站在风景里回头一笑→画面上方旅游目的地投票弹出', '短剧': '关键悬念画面定格→"下集预告"文字+下集标题弹出', '体育': '慢动作回放高光画面→"你给几分"评分弹窗', };
+      visual = (ctaVisual[cat] || ctaVisual['Vlog']) + '';
+      emotion = '✅ 根据垂类定制收尾：让观众感觉内容完整且有参与冲动，自然引导互动而非生硬要求';
+      audio = 'BGM渐弱至静音，收尾时配一声与该垂类调性匹配的音效（美食：咕嘟声/舞蹈：重鼓点/颜值：快门声/Vlog：环境音淡出）';
+      subtitle = '三行动态字幕：「点赞 ❤️」「收藏 ⭐」「关注➕」，按顺序依次弹出；底部评论区引导箭头从右滑入';
+    }
+
+    scenes.push({ label, time: timeLabel, shot: shotType, camera, vocal, visual, emotion, audio, subtitle, refNote });
+  }
+
+  return scenes;
+}
+
+function regenOne(i) {
+  const topic = document.getElementById('script-topic').textContent;
+  const card = document.getElementById('scene-' + i);
+  if (!card) return;
+  const cat = guessCat(topic);
+  // 用垂类内容池随机换台词
+  const poolKeys = ['hookLines', 'coreLines', 'emotionLines', 'climaxLines'];
+  const poolKey = poolKeys[Math.floor(Math.random() * poolKeys.length)];
+  const newLine = pickFromPool(cat, poolKey, topic, null, '');
+  if (newLine) {
+    const vocalEl = card.querySelector('.scene-val.highlight');
+    if (vocalEl) {
+      vocalEl.textContent = newLine;
+      vocalEl.style.background = '#fff3f3';
+      setTimeout(() => vocalEl.style.background = '', 1200);
+    }
+  }
+}
+
+function regenSection(section) {
+  const output = document.getElementById('script-output');
+  if (output.querySelector('.loading-wrap')) { alert('请先生成脚本！'); return; }
+  const cards = output.querySelectorAll('.scene-card');
+  if (section === 'hook') regenOne(0);
+  else if (section === 'climax') regenOne(Math.max(0, cards.length - 2));
+  else if (section === 'end') regenOne(cards.length - 1);
+}
+
+function copyScript() {
+  // 优先使用深度脚本复制
+  if (window._deepScriptData) { copyDeepScript(); return; }
+
+  const scenes = document.querySelectorAll('.scene-card, .deep-scene-card');
+  if (!scenes.length) return;
+  let text = `【分镜脚本】${document.getElementById('script-topic').textContent}\n${'='.repeat(40)}\n\n`;
+  scenes.forEach((s, i) => {
+    // 处理普通分镜卡片
+    const rows = s.querySelectorAll('.scene-row');
+    if (rows.length > 0) {
+      text += `▶ 镜头 ${i+1}（${s.querySelector('.scene-time')?.textContent || ''}）\n`;
+      rows.forEach(r => {
+        const key = r.querySelector('.scene-key')?.textContent || '';
+        const val = r.querySelector('.scene-val')?.textContent || '';
+        if (key && val) text += `  ${key}：${val}\n`;
+      });
+      text += '\n';
+    } else {
+      // 处理深度脚本卡片
+      const label = s.querySelector('.deep-scene-label')?.textContent || `镜头 ${i+1}`;
+      const time = s.querySelector('.deep-scene-time')?.textContent || '';
+      text += `▶ ${label}（${time}）\n`;
+      const tdRows = s.querySelectorAll('tr');
+      tdRows.forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 2) {
+          text += `  ${tds[0].textContent}：${tds[1].textContent}\n`;
+        }
+      });
+      text += '\n';
+    }
+  });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) { btn.textContent = '✅ 已复制'; setTimeout(() => btn.textContent = '📋 复制全部', 2000); }
+  });
+}
+
+// ============================================================
+//  AI DEEP GENERATION ENGINE — 多阶段模型调用，真正精细脚本
+// ============================================================
+
+// ─── API 配置管理（localStorage 持久化）───
+const API_CONFIG_KEY = 'viral_gen_api_config';
+
+function getApiConfig() {
+  try {
+    const raw = localStorage.getItem(API_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function saveApiConfig() {
+  const config = {
+    provider: document.getElementById('api-provider')?.value || 'openai',
+    apiKey: document.getElementById('api-key')?.value || '',
+    endpoint: document.getElementById('api-endpoint')?.value || '',
+    model: document.getElementById('api-model')?.value || 'gpt-4o',
+    modTemp: {
+      hook: parseFloat(document.getElementById('mod-temp-hook')?.value || '1.2'),
+      scene: parseFloat(document.getElementById('mod-temp-scene')?.value || '0.9'),
+      polish: parseFloat(document.getElementById('mod-temp-polish')?.value || '0.7'),
+      title: parseFloat(document.getElementById('mod-temp-title')?.value || '1.1'),
+    }
+  };
+  localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+  updateApiStatus();
+}
+
+function loadApiConfig() {
+  const config = getApiConfig();
+  if (config.provider) {
+    const sel = document.getElementById('api-provider');
+    if (sel) sel.value = config.provider;
+    onProviderChange();
+  }
+  if (config.apiKey) {
+    const inp = document.getElementById('api-key');
+    if (inp) inp.value = config.apiKey;
+  }
+  if (config.endpoint) {
+    const inp = document.getElementById('api-endpoint');
+    if (inp) inp.value = config.endpoint;
+  }
+  if (config.model) {
+    const sel = document.getElementById('api-model');
+    if (sel) sel.value = config.model;
+  }
+  if (config.modTemp) {
+    const hook = document.getElementById('mod-temp-hook');
+    if (hook && config.modTemp.hook) hook.value = String(config.modTemp.hook);
+    const scene = document.getElementById('mod-temp-scene');
+    if (scene && config.modTemp.scene) scene.value = String(config.modTemp.scene);
+    const polish = document.getElementById('mod-temp-polish');
+    if (polish && config.modTemp.polish) polish.value = String(config.modTemp.polish);
+    const title = document.getElementById('mod-temp-title');
+    if (title && config.modTemp.title) title.value = String(config.modTemp.title);
+  }
+  updateApiStatus();
+}
+
+function onProviderChange() {
+  const provider = document.getElementById('api-provider')?.value;
+  const endpointField = document.getElementById('api-endpoint-field');
+  const modelSel = document.getElementById('api-model');
+  
+  if (endpointField) endpointField.style.display = (provider === 'custom') ? 'block' : 'none';
+  
+  if (modelSel) {
+    if (provider === 'openai') {
+      modelSel.innerHTML = `<option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o-mini</option><option value="gpt-4.1">GPT-4.1</option>`;
+    } else if (provider === 'deepseek') {
+      modelSel.innerHTML = `<option value="deepseek-chat">DeepSeek V3</option><option value="deepseek-reasoner">DeepSeek R1</option>`;
+    } else if (provider === 'anthropic') {
+      modelSel.innerHTML = `<option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>`;
+    } else {
+      modelSel.innerHTML = `<option value="gpt-4o">GPT-4o</option><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="deepseek-chat">DeepSeek V3</option>`;
+    }
+  }
+  saveApiConfig();
+}
+
+function updateApiStatus() {
+  const cfg = getApiConfig();
+  const el = document.getElementById('api-status');
+  if (!el) return;
+  if (cfg.apiKey) {
+    const masked = cfg.apiKey.substring(0, 5) + '...' + cfg.apiKey.slice(-3);
+    el.className = 'api-status ready';
+    el.textContent = `✅ 已配置 · ${cfg.provider?.toUpperCase() || 'API'} · ${cfg.model || '默认'}`;
+  } else {
+    el.className = 'api-status empty';
+    el.textContent = '未配置 API Key · 只能使用模板生成';
+  }
+}
+
+// ─── 通用 AI 调用函数 ───
+async function callAI(systemPrompt, userPrompt, temperature = 0.9) {
+  const cfg = getApiConfig();
+  if (!cfg.apiKey) throw new Error('请先在侧边栏「模型配置」中填写 API Key');
+
+  // Inject analysis context if available
+  const analysisPrompt = getAnalysisPrompt();
+  if (analysisPrompt) {
+    userPrompt += '\n\n---\n' + analysisPrompt;
+  }
+
+  const provider = cfg.provider || 'openai';
+  let url, headers, body;
+
+  if (provider === 'anthropic') {
+    url = 'https://api.anthropic.com/v1/messages';
+    headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': cfg.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+    body = {
+      model: cfg.model || 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      temperature: temperature,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    };
+  } else {
+    // OpenAI 兼容格式 (DeepSeek, 自定义端点)
+    if (provider === 'deepseek') {
+      url = 'https://api.deepseek.com/v1/chat/completions';
+    } else if (provider === 'custom') {
+      url = cfg.endpoint || 'https://api.openai.com/v1/chat/completions';
+    } else {
+      url = 'https://api.openai.com/v1/chat/completions';
+    }
+    headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${cfg.apiKey}`
+    };
+    body = {
+      model: cfg.model || 'gpt-4o',
+      max_tokens: 4096,
+      temperature: temperature,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+    };
+  }
+
+  const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    let errMsg = `API 请求失败 (${resp.status})`;
+    try {
+      const errJson = JSON.parse(errText);
+      errMsg = errJson.error?.message || errJson.error?.code || errMsg;
+    } catch {}
+    throw new Error(errMsg);
+  }
+
+  const data = await resp.json();
+  if (provider === 'anthropic') {
+    return data.content?.[0]?.text || '';
+  }
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ─── 更新阶段指示器 ───
+function updateStage(stage, status) {
+  const dots = document.querySelectorAll('.deep-stage-dot');
+  const texts = document.querySelectorAll('.deep-stage-text');
+  const stages = ['hook', 'scene', 'polish', 'title'];
+  const idx = stages.indexOf(stage);
+  stages.forEach((s, i) => {
+    if (i < idx || (i === idx && status === 'done')) {
+      if (dots[i]) { dots[i].className = 'deep-stage-dot done'; }
+      if (texts[i]) { texts[i].className = 'deep-stage-text'; }
+    } else if (i === idx && status === 'active') {
+      if (dots[i]) { dots[i].className = 'deep-stage-dot active'; }
+      if (texts[i]) { texts[i].className = 'deep-stage-text active'; }
+    }
+  });
+}
+
+// ─── 主函数: AI 深度创作 ───
+async function aiDeepGenerate() {
+  let topic = '';
+  
+  // 优先使用自定义输入
+  const customInput = document.getElementById('custom-topic-input');
+  if (customInput && customInput.value.trim()) {
+    topic = customInput.value.trim();
+  } else {
+    const topicEl = document.getElementById('script-topic');
+    topic = (topicEl?.textContent || '').trim();
+  }
+  
+  if (!topic || topic.includes('尚未') || topic.includes('空')) { 
+    alert('请在左侧「✏️ 自定义创作」中输入你的选题想法，或先在选题工厂选择一个选题！'); 
+    return; 
+  }
+
+  const cfg = getApiConfig();
+  if (!cfg.apiKey) {
+    alert('请先在左侧「🤖 模型配置」面板中填写 API Key，才能使用 AI 深度创作功能。\n\n支持的 API：\n• OpenAI (GPT-4o 等)\n• DeepSeek (V3/R1)\n• Anthropic (Claude)\n• 自定义兼容端点');
+    // 自动展开配置面板
+    const card = document.getElementById('api-config-card');
+    if (card) card.classList.add('expanded');
+    return;
+  }
+
+  const duration = document.getElementById('script-duration')?.value || '30-60秒';
+  const style = document.getElementById('script-style')?.value || '快节奏卡点';
+  const platform = document.getElementById('script-platform')?.value || '抖音';
+  const ref = (currentMode !== 'original' && selectedRefIdx >= 0)
+    ? TREND_DATA.find(t => t.id === selectedRefIdx) : null;
+  const cat = guessCat(topic);
+  const modTemp = cfg.modTemp || { hook: 1.2, scene: 0.9, polish: 0.7, title: 1.1 };
+
+  const output = document.getElementById('script-output');
+  if (!output) return;
+
+  // 初始化阶段的 UI
+  output.innerHTML = `
+    <div class="deep-script-wrap">
+      <div class="deep-stage-indicator">
+        <div class="deep-stage-dot active"></div><div class="deep-stage-text active">钩子分析</div>
+        <span style="color:#ddd;">→</span>
+        <div class="deep-stage-dot"></div><div class="deep-stage-text">分镜生成</div>
+        <span style="color:#ddd;">→</span>
+        <div class="deep-stage-dot"></div><div class="deep-stage-text">润色合规</div>
+        <span style="color:#ddd;">→</span>
+        <div class="deep-stage-dot"></div><div class="deep-stage-text">标题生成</div>
+      </div>
+      <div id="deep-result-area" style="min-height:120px;">
+        <div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">阶段1/4：分析爆款钩子结构...</p></div>
+      </div>
+    </div>`;
+  const stEl = document.getElementById('script-title');
+  if (stEl) stEl.textContent = '🎬 AI 深度创作中...';
+  const smEl = document.getElementById('script-meta');
+  if (smEl) smEl.innerHTML = `<span style="background:#f0efe9;padding:2px 8px;border-radius:6px;">${topic}</span>`;
+
+  // 构建公共上下文
+  const platformRules = {
+    '抖音': '抖音推荐算法核心：前3秒完播率>点赞率>评论率>转发率。内容需有"信息缺口"制造好奇心。黄金3秒必须制造悬念或情绪冲击。',
+    '小红书': '小红书流量密码：封面标题决定点击率，前3秒决定停留。用户偏好真实感、干货感、审美感。标题要含"你"字增加代入感。',
+    'YouTube': 'YouTube算法偏好：高CTR缩略图+前30秒高留存。需要章节标记、信息密度高。CTA引导订阅和评论。',
+    'TikTok': 'TikTok FYP核心：前2秒hook极强，loopability(重播率)很关键。多用trending sounds，text overlay要大。',
+    'Instagram': 'Instagram Reels：重视觉冲击力，前2秒抓住眼球。适合品牌展示、产品对比、before/after格式。'
+  };
+  const pfRule = platformRules[platform] || platformRules['抖音'];
+
+  try {
+    // ─── 阶段 1/4: 钩子分析 ───
+    updateStage('hook', 'active');
+    const resultArea = document.getElementById('deep-result-area');
+    if (resultArea) resultArea.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">阶段1/4：分析爆款钩子结构...</p></div>';
+
+    const hookSystemPrompt = `你是短视频钩子设计师。禁止任何客套话、禁止解释任务、禁止"好的"/"以下是"等开头。直接输出内容。
+
+规则：
+1. 生成5个强力开头钩子，每个≤30字
+2. 至少用3种不同类型：反直觉、悬念、情感、挑战、结果先行、认知颠覆
+3. 严格按此格式每行一个（不要编号、不要空行）：
+   类型｜钩子文本｜为什么有效
+4. ${ref && currentMode === 'ref' ? `【重要】请分析参考视频「${ref.title}」的钩子手法（${ref.reason}），在所有钩子中保持类似的节奏和切入手法` : ''}`;
+
+    const hookUserPrompt = `选题：${topic} | 垂类：${cat} | 平台：${platform} | 风格：${style}
+${ref ? `【参考爆款】标题：${ref.title} | ${ref.platform} | 热度${ref.heat}° | 爆款逻辑：${ref.reason} | 内容：${ref.desc}\n创作模式：仿写（保持结构节奏，更换内容题材）` : ''}
+
+直接输出5个钩子，不要任何开场白。`;
+
+    const hookResult = await callAI(hookSystemPrompt, hookUserPrompt, modTemp.hook);
+    const hooks = hookResult.split('\n').filter(l => l.includes('｜') || l.includes('|')).slice(0, 5);
+
+    // ─── 阶段 2/4: 分镜生成 ───
+    updateStage('hook', 'done');
+    updateStage('scene', 'active');
+    if (resultArea) resultArea.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">阶段2/4：生成逐镜分镜脚本...</p></div>';
+
+    const sceneSystemPrompt = `你是短视频导演。禁止任何开场白、禁止"好的"/"收到"/"以下是"、禁止解释你在做什么。只输出分镜脚本。
+
+输出格式（每个镜头严格按此模板，镜头之间空一行）：
+
+【镜头1】0-3s
+景别：XXX
+运镜：XXX
+台词：XXX（必须写完整的口播台词！每句台词至少20字！禁止用省略号！禁止写"[此处台词]"或占位符！）
+画面：XXX（具体描述演员动作、场景、道具、字幕视觉效果）
+情绪：XXX
+音效：XXX
+字幕：XXX
+
+【镜头2】3-8s
+景别：XXX
+运镜：XXX
+台词：XXX
+画面：XXX
+情绪：XXX
+音效：XXX
+字幕：XXX
+
+${currentMode === 'ref' && ref ? `【强制要求-仿写模式】你必须模仿参考爆款「${ref.title}」的叙事结构：
+- 参考内容：${ref.desc}
+- 爆款逻辑：${ref.reason}
+- 在你生成的每个镜头中，保持该参考视频的节奏密度、情绪曲线和转场节奏。前3秒钩子必须采用与参考视频相同的手法类型。` : ''}
+
+规则：
+- 台词绝不能用省略号、占位符、括号描述
+- 画面描述要具体到演员动作、道具、场景
+- 前3秒必须是强力钩子
+- 最后一个镜头必须有自然互动引导
+- 禁止绝对化用语（最、第一、绝对、100%等）`;
+
+    const sceneUserPrompt = `选题：${topic} | 垂类：${cat} | 平台：${platform} | 时长：${duration} | 风格：${style}
+${currentMode === 'ref' && ref ? `创作模式：仿写 | 参考视频：「${ref.title}」| 爆款逻辑：${ref.reason}` : ''}
+平台算法：${pfRule}
+
+已选钩子：
+${hooks.map(h => h.trim()).join('\n')}
+
+要求：生成 ${parseDuration(duration)[1]} 个镜头的完整分镜脚本。直接输出，不要任何开场白。`;
+
+    const sceneResult = await callAI(sceneSystemPrompt, sceneUserPrompt, modTemp.scene);
+
+    // ─── 阶段 3/4: 润色与合规检查 ───
+    updateStage('scene', 'done');
+    updateStage('polish', 'active');
+    if (resultArea) resultArea.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">阶段3/4：润色台词 + 违禁词检查...</p></div>';
+
+    const polishSystemPrompt = `你是短视频内容合规审核员。禁止任何开场白。只输出风险报告。
+
+逐行检查台词中的违规词汇，按此格式逐个报告：
+🟡 低风险 | 行号 | 原词 | 建议替换词
+🟠 中风险 | 行号 | 原词 | 原因
+🔴 高风险 | 行号 | 原词 | 必须删除的原因
+
+违禁词类：绝对化用语(最/第一/绝对/100%)、夸大宣传(保证/立刻见效)、医疗承诺、诱导互动、低俗词。
+
+如果没有违规词，只输出：✅ 未发现违禁词`;
+
+    const polishUserPrompt = `检查以下分镜脚本中的违禁词（只检查台词部分）：
+${sceneResult.substring(0, 2000)}
+
+直接输出风险报告，不要任何其他内容。`;
+
+    const polishResult = await callAI(polishSystemPrompt, polishUserPrompt, modTemp.polish);
+
+    // ─── 阶段 4/4: 标题生成 ───
+    updateStage('polish', 'done');
+    updateStage('title', 'active');
+    if (resultArea) resultArea.innerHTML = '<div class="loading-wrap"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div><p style="margin-left:10px;font-size:13px;color:#888;">阶段4/4：生成爆款标题...</p></div>';
+
+    const titleSystemPrompt = `你是短视频标题专家。禁止开场白。每行一个标题，格式：
+序号. 标题文本 | 预计点击率：X% | 适合人群：XXX
+
+要求：制造信息缺口、含具体数字或数据、匹配${style}风格。共5个。`;
+
+    const titleUserPrompt = `选题：${topic} | 平台：${platform} | 风格：${style}
+脚本前500字：${sceneResult.substring(0, 500)}
+
+直接输出5个标题。`;
+
+    const titleResult = await callAI(titleSystemPrompt, titleUserPrompt, modTemp.title);
+
+    // ─── 渲染最终结果 ───
+    updateStage('title', 'done');
+    updateStage('polish', 'done');
+    renderDeepScript({
+      topic, cat, platform, duration, style, mode: currentMode, ref,
+      hooks, sceneResult, polishResult, titleResult
+    });
+
+    const copyBtn = document.getElementById('copy-btn');
+    if (copyBtn) { copyBtn.style.display = 'inline-block'; copyBtn.textContent = '📋 复制全部'; }
+
+  } catch (e) {
+    const resultArea = document.getElementById('deep-result-area');
+    if (resultArea) {
+      resultArea.innerHTML = `<div style="padding:20px;text-align:center;color:var(--red);">
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">AI 深度创作出错</div>
+        <div style="font-size:13px;color:#888;margin-bottom:16px;">${e.message || '未知错误'}</div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:16px;">常见原因：API Key 无效、网络问题、模型不支持</div>
+        <button class="btn-sm" onclick="aiDeepGenerate()">🔄 重试</button>
+        <button class="btn-sm" onclick="generateScript()" style="margin-left:8px;">📋 使用模板生成</button>
+      </div>`;
+    }
+    const stEl = document.getElementById('script-title');
+    if (stEl) stEl.textContent = '分镜脚本';
+    console.error('AI Deep Generate error:', e);
+  }
+}
+
+// ─── 渲染精细脚本 ───
+function renderDeepScript(data) {
+  const output = document.getElementById('script-output');
+  const stEl = document.getElementById('script-title');
+  const smEl = document.getElementById('script-meta');
+  if (stEl) stEl.textContent = '🎬 AI 精细分镜脚本';
+  if (smEl) smEl.innerHTML = `<span style="background:#f0efe9;padding:2px 8px;border-radius:6px;">${data.topic}</span>
+    <span style="font-size:11px;color:#888;margin-left:8px;">${data.platform} · ${data.duration} · 4阶段AI生成</span>`;
+
+  // 解析钩子
+  const hookLines = data.hooks || [];
+
+  // 解析标题
+  const titleLines = (data.titleResult || '').split('\n').filter(l => l.trim() && (l.includes('.') || l.includes('。')));
+
+  let html = `<div class="deep-script-wrap">`;
+
+  // 阶段指示器（全部完成）
+  html += `<div class="deep-stage-indicator">
+    <div class="deep-stage-dot done"></div><div class="deep-stage-text">钩子分析</div>
+    <span style="color:#4caf50;">→</span>
+    <div class="deep-stage-dot done"></div><div class="deep-stage-text">分镜生成</div>
+    <span style="color:#4caf50;">→</span>
+    <div class="deep-stage-dot done"></div><div class="deep-stage-text">润色合规</div>
+    <span style="color:#4caf50;">→</span>
+    <div class="deep-stage-dot done"></div><div class="deep-stage-text">标题生成</div>
+    <span style="font-size:11px;color:#888;margin-left:auto;">4/4 阶段完成</span>
+  </div>`;
+
+  // 参考分析
+  if (data.ref) {
+    html += `<div class="analysis-box">
+      <div class="analysis-title">📊 参考爆款：${data.ref.title}</div>
+      <div class="analysis-text">
+        <b>平台：</b>${data.ref.platform} | <b>热度：</b>${data.ref.heat}°<br>
+        <b>逻辑：</b>${data.ref.reason}<br>
+        <b>内容：</b>${data.ref.desc}
+      </div>
+    </div>`;
+  }
+
+  // 选题信息
+  html += `<div style="margin-bottom:14px;padding:10px 14px;background:#f8f7f3;border-radius:9px;">
+    <span style="font-size:13px;font-weight:600;">「${data.topic}」</span>
+    <span style="font-size:12px;color:#888;margin-left:8px;">${data.duration} · ${data.platform} · ${data.style}</span>
+  </div>`;
+
+  // 钩子分析
+  if (hookLines.length > 0) {
+    html += `<div class="deep-hooks-section">
+      <div class="deep-hooks-title">🎣 前3秒强力钩子（AI多类型分析）</div>`;
+    hookLines.forEach(h => {
+      const parts = h.split(/[｜|]/);
+      const type = parts[0]?.trim() || '';
+      const text = parts[1]?.trim() || h;
+      const reason = parts[2]?.trim() || '';
+      html += `<div class="deep-hook-item">
+        <span class="hook-tag">${type}</span>
+        <strong>${escapeHtml(text)}</strong>
+        ${reason ? `<div style="font-size:11px;color:#888;margin-top:3px;">💡 ${escapeHtml(reason)}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // 分镜脚本（使用原始分镜，不是润色结果）
+  const sceneText = data.sceneResult || '';
+  const polishText = data.polishResult || ''; // 合规报告
+  if (sceneText) {
+    html += `<div style="margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,#f0f5fb,#e8f0fe);border-radius:9px;font-size:12px;color:var(--accent);font-weight:600;">
+      📋 逐镜分镜脚本
+    </div>`;
+    const scenes = parseScenes(sceneText);
+    if (scenes.length > 0) {
+      scenes.forEach((s, i) => {
+        html += `<div class="deep-scene-card">
+          <div class="deep-scene-header">
+            <div class="deep-scene-label">🎬 ${s.label || '镜头 ' + (i+1)}</div>
+            <div class="deep-scene-time">${s.time || ''}</div>
+          </div>
+          <div class="deep-scene-body">
+            <table class="deep-scene-table">`;
+        if (s.shot) html += `<tr><td>景别</td><td>${escapeHtml(s.shot)}</td></tr>`;
+        if (s.camera) html += `<tr><td>运镜</td><td>${escapeHtml(s.camera)}</td></tr>`;
+        if (s.vocal) html += `<tr><td>台词/旁白</td><td class="deep-vocal">${escapeHtml(s.vocal)}</td></tr>`;
+        if (s.visual) html += `<tr><td>画面内容</td><td>${escapeHtml(s.visual)}</td></tr>`;
+        if (s.emotion) html += `<tr><td>情绪节奏</td><td style="color:#8e44ad;">${escapeHtml(s.emotion)}</td></tr>`;
+        if (s.audio) html += `<tr><td>音效/BGM</td><td style="color:#185FA5;">${escapeHtml(s.audio)}</td></tr>`;
+        if (s.subtitle) html += `<tr><td>字幕建议</td><td style="font-size:12px;color:#888;">${escapeHtml(s.subtitle)}</td></tr>`;
+        if (s.warning) html += `<tr><td>⚠️ 合规</td><td style="color:#d97706;font-size:11px;">${escapeHtml(s.warning)}</td></tr>`;
+        html += `</table></div></div>`;
+      });
+    } else {
+      // 无法解析分镜时直接显示原文
+      html += `<div class="scene-card"><div class="scene-body" style="white-space:pre-wrap;font-size:13px;line-height:1.8;color:var(--text);">${escapeHtml(sceneText)}</div></div>`;
+    }
+  }
+
+  // 合规报告（polishResult）
+  if (polishText && polishText.trim()) {
+    html += `<div class="deep-compliance">
+      <div class="deep-compliance-title">⚠️ 违禁词合规检查</div>
+      <div class="deep-compliance-text" style="white-space:pre-wrap;">${escapeHtml(polishText.substring(0, 800))}</div>
+    </div>`;
+  }
+
+  // 标题建议
+  if (titleLines.length > 0) {
+    html += `<div class="deep-titles-section">
+      <div class="deep-titles-title">📝 爆款标题建议（5个AI生成方案）</div>`;
+    titleLines.forEach((t, i) => {
+      html += `<div class="deep-title-item">
+        ${escapeHtml(t.trim())}
+        ${i === 0 ? '<span class="title-score">🏆 推荐</span>' : i === 1 ? '<span class="title-score">备选</span>' : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // 操作按钮
+  html += `<div class="deep-actions">
+    <button class="deep-btn deep-btn-primary" onclick="copyDeepScript()">📋 复制完整脚本</button>
+    <button class="deep-btn deep-btn-ai" onclick="aiDeepGenerate()">🔄 重新 AI 创作</button>
+    <button class="deep-btn deep-btn-outline" onclick="generateScript()">使用模板快速生成</button>
+  </div></div>`;
+
+  output.innerHTML = html;
+  window._deepScriptData = data;  // 保存数据供复制使用
+}
+
+// ─── 解析 AI 返回的分镜文本 ───
+function parseScenes(text) {
+  // 策略1: 按「【镜头N】」分割（新格式）
+  const lensBlocks = text.split(/(?:【镜头|【第)\s*(\d+)\s*[】\]]/);
+  
+  if (lensBlocks.length > 1) {
+    // 元素: [prefix, "1", block1, "2", block2, ...]
+    // 从 index=1 开始，每次取一对 (num, block)
+    const scenes = [];
+    for (let i = 1; i < lensBlocks.length; i += 2) {
+      const num = lensBlocks[i];
+      const block = lensBlocks[i + 1] || '';
+      const scene = parseSceneBlock(block);
+      if (!scene.label) scene.label = `镜头 ${num}`;
+      if (scene.vocal || scene.shot || scene.visual) scenes.push(scene);
+    }
+    if (scenes.length > 0) return scenes;
+  }
+
+  // 策略2: 按「镜头N」分割（旧格式，无【】）
+  const bareBlocks = text.split(/(?:镜头|Scene)\s*(\d+)/i);
+  if (bareBlocks.length > 1) {
+    const scenes = [];
+    for (let i = 1; i < bareBlocks.length; i += 2) {
+      const num = bareBlocks[i];
+      const block = bareBlocks[i + 1] || '';
+      const scene = parseSceneBlock(block);
+      if (!scene.label) scene.label = `镜头 ${num}`;
+      if (scene.vocal || scene.shot || scene.visual) scenes.push(scene);
+    }
+    if (scenes.length > 0) return scenes;
+  }
+
+  // 策略3: 按双换行分割
+  const blocks = text.split(/\n\n+/);
+  if (blocks.length >= 2) {
+    const scenes = blocks.map((b, i) => {
+      const s = parseSceneBlock(b);
+      if (!s.label) s.label = `镜头 ${i + 1}`;
+      return s;
+    }).filter(s => s.vocal || s.shot || s.visual);
+    if (scenes.length > 0) return scenes;
+  }
+
+  // 降级：整体当一段
+  const fallback = parseSceneBlock(text);
+  if (!fallback.label) fallback.label = '分镜脚本';
+  return fallback.vocal || fallback.shot ? [fallback] : [];
+}
+
+function parseSceneBlock(block) {
+  const result = {};
+  const lines = block.split('\n').filter(l => l.trim());
+  
+  // 尝试从第一行提取时间和标签
+  const firstLine = lines[0] || '';
+  const timeMatch = firstLine.match(/(\d+[-~]\d+)s/);
+  if (timeMatch) result.time = timeMatch[0];
+  
+  // 尝试从前面内容提取镜头标签
+  const labelMatch = firstLine.match(/(?:镜头|场景)\s*(\d+)/);
+  if (labelMatch) result.label = `镜头 ${labelMatch[1]}`;
+  
+  const patterns = [
+    { key: 'shot', re: /景别[：:]\s*(.+)/ },
+    { key: 'camera', re: /运镜[：:]\s*(.+)/ },
+    { key: 'vocal', re: /台词[：:]?\s*(?:旁白)?[：:]\s*(.+)/ },
+    { key: 'vocal', re: /旁白[：:]\s*(.+)/ },
+    { key: 'visual', re: /画面[：:]?\s*(?:内容)?[：:]\s*(.+)/ },
+    { key: 'emotion', re: /情绪[：:]\s*(.+)/ },
+    { key: 'emotion', re: /节奏[：:]\s*(.+)/ },
+    { key: 'audio', re: /音效[：:]\s*(.+)/ },
+    { key: 'audio', re: /BGM[：:]\s*(.+)/ },
+    { key: 'subtitle', re: /字幕[：:]\s*(.+)/ },
+    { key: 'warning', re: /⚠️\s*(.+)/ },
+    { key: 'time', re: /(\d+[-~]\d+)s/ },
+    { key: 'label', re: /【(.+?)】/ },
+  ];
+
+  lines.forEach(line => {
+    for (const p of patterns) {
+      const m = line.match(p.re);
+      if (m) {
+        if (p.key === 'audio' && result.audio) result.audio += ' | ' + m[1];
+        else if (p.key === 'emotion' && result.emotion) result.emotion += ' | ' + m[1];
+        else if (!result[p.key]) result[p.key] = m[1].trim();
+      }
+    }
+  });
+
+  // 如果没有匹配到任何字段但有内容，把整段当台词
+  if (!result.vocal && !result.shot && !result.visual && block.trim()) {
+    result.vocal = block.trim();
+  }
+
+  return result;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── 自定义选题输入 ───
+function onCustomTopicInput() {
+  const inp = document.getElementById('custom-topic-input');
+  const hint = document.getElementById('custom-topic-hint');
+  const btn = document.getElementById('btn-use-custom');
+  const hasText = inp && inp.value.trim();
+  if (hint) hint.style.display = hasText ? 'block' : 'none';
+  if (btn) btn.style.display = hasText ? 'block' : 'none';
+}
+
+function useCustomTopic() {
+  const inp = document.getElementById('custom-topic-input');
+  const topic = inp?.value.trim();
+  if (!topic) return;
+  
+  // 更新脚本标题显示
+  const stEl = document.getElementById('script-title');
+  if (stEl) stEl.textContent = '✏️ 自定义创作';
+  const smEl = document.getElementById('script-meta');
+  if (smEl) smEl.innerHTML = `<span style="background:#f0efe9;padding:2px 8px;border-radius:6px;">${escapeHtml(topic)}</span>`;
+  
+  // 更新 topic 元素
+  const topicEl = document.getElementById('script-topic');
+  if (topicEl) topicEl.textContent = topic;
+  
+  // 视觉反馈
+  const btn = document.getElementById('btn-use-custom');
+  if (btn) { btn.textContent = '✅ 已就绪！点击生成脚本'; setTimeout(() => btn.textContent = '✅ 使用此选题创作', 2000); }
+}
+
+// ─── 复制精细脚本 ───
+function copyDeepScript() {
+  const data = window._deepScriptData;
+  if (!data) return;
+  
+  let text = `═══════════════════════════════════════\n`;
+  text += `  🎬 AI 精细分镜脚本\n`;
+  text += `  选题：「${data.topic}」\n`;
+  text += `  平台：${data.platform} | 时长：${data.duration} | 风格：${data.style}\n`;
+  text += `═══════════════════════════════════════\n\n`;
+
+  if (data.hooks && data.hooks.length > 0) {
+    text += `【🎣 前3秒强力钩子】\n`;
+    data.hooks.forEach((h, i) => text += `  ${i+1}. ${h.trim()}\n`);
+    text += `\n`;
+  }
+
+  text += `【📋 分镜脚本 + 润色台词】\n`;
+  text += (data.polishResult || data.sceneResult || '') + `\n\n`;
+
+  if (data.titleResult) {
+    text += `【📝 爆款标题建议】\n${data.titleResult}\n\n`;
+  }
+
+  text += `【⚠️ 合规提醒】\n`;
+  text += `• 已检查违禁词，请发布前再次用平台审核工具确认\n`;
+  text += `• 避免绝对化用语（最/第一/绝对）\n• ${data.platform}平台推荐算法已优化\n`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) { btn.textContent = '✅ 已复制'; setTimeout(() => btn.textContent = '📋 复制全部', 2000); }
+  }).catch(() => alert('复制失败，请手动选择文本复制'));
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+loadApiConfig();
+renderTrends();
+buildRefList();
+</script>
+</body>
+</html>

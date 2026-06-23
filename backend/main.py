@@ -6,7 +6,7 @@ Video viral analysis platform powered by StepFun AI
 import os
 import shutil
 import threading
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Header
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,11 +58,18 @@ async def health_check():
 
 
 @app.post("/api/upload")
-async def upload_video(file: UploadFile = File(...)):
-    """Upload a video file for analysis."""
+async def upload_video(
+    file: UploadFile = File(...),
+    x_stepfun_api_key: str = Header(None, alias="X-StepFun-API-Key"),
+):
+    """Upload a video file for analysis. API Key passed via header."""
     # Validate file type
     if not file.filename:
         raise HTTPException(status_code=400, detail="文件名不能为空")
+
+    # Check API Key
+    if not x_stepfun_api_key:
+        raise HTTPException(status_code=400, detail="请在页面顶部填入您的 StepFun API Key")
 
     ext = file.filename.lower().split(".")[-1] if "." in file.filename else ""
     if ext not in ["mp4", "mov", "mkv"]:
@@ -118,7 +125,7 @@ async def upload_video(file: UploadFile = File(...)):
     # Start analysis in background (DB record already exists, no race condition)
     def analyze_task():
         try:
-            run_full_analysis(file_path, file.filename, analysis_id)
+            run_full_analysis(file_path, file.filename, analysis_id, api_key=x_stepfun_api_key)
         except Exception as e:
             print(f"Analysis error: {e}")
 

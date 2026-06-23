@@ -73,6 +73,15 @@ body::before {
 .header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
 .header-sub { font-size: 0.8rem; color: var(--text-secondary); }
 .header-right { display: flex; align-items: center; gap: 12px; }
+.api-key-box { position: relative; }
+.api-key-input {
+  width: 200px; padding: 7px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border-color); background: var(--bg-card);
+  color: var(--text-primary); font-size: 0.78rem; outline: none;
+  transition: all 0.2s; font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.api-key-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+.api-key-input::placeholder { color: var(--text-muted); font-family: inherit; }
 
 /* Theme Toggle */
 .theme-toggle {
@@ -354,6 +363,11 @@ body::before {
       </div>
     </div>
     <div class="header-right">
+      <div class="api-key-box" id="apiKeyContainer">
+        <input type="password" class="api-key-input" id="apiKeyInput" 
+               placeholder="StepFun API Key" autocomplete="off"
+               onfocus="this.type='text'" onblur="if(!this.value)this.type='password'; saveApiKey();">
+      </div>
       <div class="nav-tabs">
         <button class="nav-tab active" data-page="analyze">📊 分析</button>
         <button class="nav-tab" data-page="history">📋 历史</button>
@@ -435,6 +449,11 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', saved);
   document.getElementById('themeBtn').textContent = saved === 'dark' ? '🌙' : '☀️';
 })();
+// Load saved API Key
+(function() {
+  const key = sessionStorage.getItem('stepfun_api_key');
+  if (key) document.getElementById('apiKeyInput').value = key;
+})();
 
 // ===== Navigation =====
 document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -454,6 +473,16 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===== API Key =====
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key) sessionStorage.setItem('stepfun_api_key', key);
+  else sessionStorage.removeItem('stepfun_api_key');
+}
+function getApiKey() {
+  return sessionStorage.getItem('stepfun_api_key') || '';
 }
 
 // ===== Upload =====
@@ -493,7 +522,18 @@ async function handleUpload(file) {
   formData.append('file', file);
 
   try {
-    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      showToast('请先在页面顶部输入 StepFun API Key');
+      uploadZone.style.display = '';
+      document.getElementById('processingCard').style.display = 'none';
+      return;
+    }
+    const resp = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-StepFun-API-Key': apiKey }
+    });
     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || '上传失败'); }
     const data = await resp.json();
 
@@ -605,6 +645,7 @@ function renderResults(data) {
         <span>⏱ 处理耗时: ${data.processing_time_seconds || 0}s</span>
         <span>🕐 ${data.completed_at ? new Date(data.completed_at).toLocaleString('zh-CN') : ''}</span>
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="location.reload()">🔄 分析新视频</button>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px;margin-left:6px" onclick="sendToGenerator()">🚀 生成相似内容</button>
       </div>
     </div>
 
@@ -877,6 +918,32 @@ async function loadCompare(ids) {
   } catch (e) {
     document.getElementById('compareGrid').innerHTML = `<div class="empty-state"><h3>加载失败</h3><p>${e.message}</p></div>`;
   }
+}
+
+// ===== Generator Integration =====
+let currentAnalysisData = null;
+const _origRenderResults = renderResults;
+renderResults = function(data) {
+  currentAnalysisData = data;
+  _origRenderResults(data);
+};
+
+function sendToGenerator() {
+  if (!currentAnalysisData) { showToast('暂无分析数据'); return; }
+  const rj = currentAnalysisData.result_json || {};
+  const payload = {
+    from: 'analyzer', viral_style: currentAnalysisData.viral_style || '',
+    overall_score: currentAnalysisData.overall_score || 0,
+    summary: currentAnalysisData.summary || '',
+    transcript: (currentAnalysisData.transcript_text || '').substring(0, 2000),
+    opening_hook: rj.opening_hook || {}, script_structure: rj.script_structure || {},
+    emotional_curve: rj.emotional_curve || {}, interaction_guide: rj.interaction_guide || {},
+    data_prediction: rj.data_prediction || {}, content_formula: rj.content_formula || {},
+  };
+  const json = encodeURIComponent(JSON.stringify(payload));
+  const encoded = btoa(json);
+  const genUrl = 'https://2e92e9b45d7c4bfb9f89f5eff9133f48.app.codebuddy.work#analysis=' + encoded;
+  window.open(genUrl, '_blank');
 }
 </script>
 </body>

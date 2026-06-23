@@ -22,7 +22,7 @@ from stepfun_api import (
 )
 
 
-def run_full_analysis(file_path: str, original_filename: str, analysis_id: str = None) -> dict:
+def run_full_analysis(file_path: str, original_filename: str, analysis_id: str = None, api_key: str = None) -> dict:
     """
     Run the complete video analysis pipeline.
     1. Extract audio → Transcribe via ASR
@@ -75,7 +75,7 @@ def run_full_analysis(file_path: str, original_filename: str, analysis_id: str =
             update_analysis_status(analysis_id, "transcribing")
             try:
                 audio_path = extract_audio_wav(file_path)
-                transcript_text = transcribe_audio_file(audio_path)
+                transcript_text = transcribe_audio_file(audio_path, api_key)
                 # Clean up audio file
                 if os.path.exists(audio_path):
                     os.remove(audio_path)
@@ -94,25 +94,25 @@ def run_full_analysis(file_path: str, original_filename: str, analysis_id: str =
         if video_size_mb <= MAX_VIDEO_SIZE_MB and (duration <= MAX_VIDEO_DURATION_MINUTES * 60 or duration == 0):
             # Direct video upload — try stepfile first, then base64, then frames
             try:
-                stepfile_url = upload_file_to_stepfun(file_path)
+                stepfile_url = upload_file_to_stepfun(file_path, api_key)
                 update_video_stepfile(analysis_id, stepfile_url)
-                result = analyze_video_visual(stepfile_url, transcript_text)
+                result = analyze_video_visual(stepfile_url, transcript_text, api_key)
                 if result.get("error"):
                     raise ValueError(f"Stepfile分析返回错误: {result.get('summary')}")
             except Exception as e1:
                 print(f"Stepfile方式失败, 尝试base64方式: {e1}")
                 try:
-                    result = analyze_video_base64(file_path, transcript_text)
+                    result = analyze_video_base64(file_path, transcript_text, api_key)
                     if result.get("error"):
                         raise ValueError(f"Base64分析返回错误: {result.get('summary')}")
                 except Exception as e2:
                     print(f"Base64方式也失败, 切换到关键帧模式: {e2}")
                     frames = extract_keyframes(file_path)
-                    result = analyze_video_frames(frames, transcript_text)
+                    result = analyze_video_frames(frames, transcript_text, api_key)
         else:
             # Video too large - use frame extraction approach
             frames = extract_keyframes(file_path)
-            result = analyze_video_frames(frames, transcript_text)
+            result = analyze_video_frames(frames, transcript_text, api_key)
 
         # Step 3: Parse and structure results
         update_analysis_status(analysis_id, "structuring")

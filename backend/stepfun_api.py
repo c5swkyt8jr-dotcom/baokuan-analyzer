@@ -14,6 +14,15 @@ from openai import OpenAI
 from config import STEPFUN_API_KEY, STEPFUN_BASE_URL, ASR_BASE_URL
 
 
+def _get_client(api_key: str) -> OpenAI:
+    """Create a StepFun API client with the given API key (per-request, no global state)."""
+    return OpenAI(
+        api_key=api_key,
+        base_url=STEPFUN_BASE_URL,
+        timeout=300.0,
+    )
+
+
 def _robust_json_parse(text: str) -> dict:
     """
     Multiple-strategy JSON parsing to handle imperfect model output.
@@ -67,16 +76,11 @@ def _robust_json_parse(text: str) -> dict:
             e.doc, e.pos
         )
 
-# Create OpenAI-compatible client for step-3.7-flash
-client = OpenAI(
-    api_key=STEPFUN_API_KEY,
-    base_url=STEPFUN_BASE_URL,
-    timeout=300.0,
-)
+# Client is now created per-request via _get_client(api_key) — see each function below.
 
-
-def upload_file_to_stepfun(file_path: str, purpose: str = "storage") -> str:
+def upload_file_to_stepfun(file_path: str, api_key: str, purpose: str = "storage") -> str:
     """Upload a file to StepFun storage and return the stepfile:// URL."""
+    client = _get_client(api_key)
     with open(file_path, "rb") as f:
         file_obj = client.files.create(
             file=f,
@@ -88,6 +92,7 @@ def upload_file_to_stepfun(file_path: str, purpose: str = "storage") -> str:
 def analyze_video_visual(
     video_url: str,
     transcript_text: str = "",
+    api_key: str = "",
     reasoning_effort: str = "high",
 ) -> dict:
     """
@@ -223,6 +228,7 @@ def analyze_video_visual(
 请基于真实视频内容，给出客观、专业、有深度的分析。不要输出任何JSON之外的内容。"""
 
     try:
+        client = _get_client(api_key)
         print(f"[analyze_video_visual] Sending video_url={video_url[:50]}..., prompt_len={len(prompt)}")
         response = client.chat.completions.create(
             model="step-3.7-flash",
@@ -269,6 +275,7 @@ def analyze_video_visual(
 def analyze_video_base64(
     file_path: str,
     transcript_text: str = "",
+    api_key: str = "",
     reasoning_effort: str = "high",
 ) -> dict:
     """
@@ -313,6 +320,7 @@ def analyze_video_base64(
 {{"overall_score":85,"viral_style":"风格","summary":"2-3句话概括","opening_hook":{{"score":90,"level":"S级","analysis":"分析","hook_type":"类型","key_moment":"0:00","improvement":"建议"}},"script_structure":{{"score":82,"level":"A级","analysis":"分析","structure_type":"类型","key_moments":["时间:描述"],"improvement":"建议"}},"emotional_curve":{{"score":88,"level":"A级","analysis":"分析","curve_description":"描述","peak_moments":[{{"time":"时间","emotion":"情绪","intensity":5,"description":"描述"}}],"improvement":"建议"}},"interaction_guide":{{"score":75,"level":"B级","analysis":"分析","cta_moments":[{{"time":"时间","type":"类型","description":"描述"}}],"improvement":"建议"}},"data_prediction":{{"score":80,"level":"A级","analysis":"分析","estimated_completion_rate":65,"estimated_like_rate":4.5,"estimated_comment_rate":1.2,"estimated_share_rate":2.0,"viral_potential":"中","improvement":"建议"}},"content_formula":{{"score":85,"level":"A级","analysis":"分析","formula_name":"名称","formula_template":"可复用模板","core_elements":["要素"],"applicable_scenarios":["场景"],"improvement":"建议"}}}}"""
 
     try:
+        client = _get_client(api_key)
         response = client.chat.completions.create(
             model="step-3.7-flash",
             messages=[{
@@ -351,6 +359,7 @@ def analyze_video_base64(
 def analyze_video_frames(
     frame_paths: list[str],
     transcript_text: str = "",
+    api_key: str = "",
     reasoning_effort: str = "high",
 ) -> dict:
     """
@@ -391,6 +400,7 @@ def analyze_video_frames(
     })
 
     try:
+        client = _get_client(api_key)
         response = client.chat.completions.create(
             model="step-3.7-flash",
             messages=[{"role": "user", "content": content}],
@@ -510,7 +520,7 @@ def _get_analysis_prompt(transcript_text: str = "", is_frames: bool = False) -> 
 请基于真实视频/画面内容，给出客观、专业、有深度的分析。"""
 
 
-def transcribe_audio(audio_base64: str, audio_format: str = "pcm", sample_rate: int = 16000) -> str:
+def transcribe_audio(audio_base64: str, api_key: str, audio_format: str = "pcm", sample_rate: int = 16000) -> str:
     """
     Transcribe audio using stepaudio-2.5-asr.
     Returns the full transcript text.
@@ -543,7 +553,7 @@ def transcribe_audio(audio_base64: str, audio_format: str = "pcm", sample_rate: 
                 "POST",
                 f"{ASR_BASE_URL}/audio/asr/sse",
                 headers={
-                    "Authorization": f"Bearer {STEPFUN_API_KEY}",
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                     "Accept": "text/event-stream",
                 },
@@ -574,7 +584,7 @@ def transcribe_audio(audio_base64: str, audio_format: str = "pcm", sample_rate: 
         raise Exception(f"语音识别失败: {str(e)}")
 
 
-def transcribe_audio_file(audio_file_path: str) -> str:
+def transcribe_audio_file(audio_file_path: str, api_key: str) -> str:
     """Transcribe an audio file using stepaudio-2.5-asr."""
     # Determine format from extension
     ext = audio_file_path.lower().split(".")[-1]
@@ -593,4 +603,4 @@ def transcribe_audio_file(audio_file_path: str) -> str:
     # Default to PCM 16kHz for our extracted audio
     sample_rate = 16000
 
-    return transcribe_audio(audio_base64, audio_format, sample_rate)
+    return transcribe_audio(audio_base64, api_key, audio_format, sample_rate)
